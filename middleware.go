@@ -3,11 +3,11 @@ package main
 import "net/http"
 import pc "github.com/maklesoft/padlock-cloud/padlockcloud"
 
-type CheckPlan struct {
+type CheckSubscription struct {
 	*Server
 }
 
-func (m *CheckPlan) Wrap(h pc.Handler) pc.Handler {
+func (m *CheckSubscription) Wrap(h pc.Handler) pc.Handler {
 	return pc.HandlerFunc(func(w http.ResponseWriter, r *http.Request, a *pc.AuthToken) error {
 		var email string
 		if a != nil {
@@ -28,19 +28,13 @@ func (m *CheckPlan) Wrap(h pc.Handler) pc.Handler {
 		// Load existing data for this account
 		if err := m.Storage.Get(acc); err == pc.ErrNotFound {
 			// No plan account found. Rejecting request
-			return &PlanRequired{}
+			return &SubscriptionRequired{}
 		} else if err != nil {
 			return err
 		}
 
-		// Check for valid subscriptions
-		hasPlan, err := m.CheckPlansForAccount(acc)
-		if err != nil {
-			return err
-		}
-
-		if !hasPlan {
-			return &PlanRequired{}
+		if acc.RemainingTrialPeriod() == 0 && !acc.HasActiveSubscription() {
+			return &SubscriptionRequired{}
 		}
 
 		return h.Handle(w, r, a)

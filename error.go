@@ -3,22 +3,22 @@ package main
 import "fmt"
 import "net/http"
 
-type PlanRequired struct {
+type SubscriptionRequired struct {
 }
 
-func (e *PlanRequired) Code() string {
+func (e *SubscriptionRequired) Code() string {
 	return "plan_required"
 }
 
-func (e *PlanRequired) Error() string {
+func (e *SubscriptionRequired) Error() string {
 	return fmt.Sprintf("%s", e.Code())
 }
 
-func (e *PlanRequired) Status() int {
+func (e *SubscriptionRequired) Status() int {
 	return http.StatusForbidden
 }
 
-func (e *PlanRequired) Message() string {
+func (e *SubscriptionRequired) Message() string {
 	return http.StatusText(e.Status())
 }
 

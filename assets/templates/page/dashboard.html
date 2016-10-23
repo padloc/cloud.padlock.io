@@ -1,0 +1,46 @@
+{{- define "csp" -}}default-src 'self' https://*.stripe.com{{- end -}}
+
+{{ define "main" }}
+
+<section>
+    <h2>Manage Subscriptions</h2>
+    {{ if .subAccount.HasActiveSubscription }}
+        <p>
+            You are currently subscribed to the <strong>monthly</strong> plan.
+        </p>
+    {{ else }}
+        {{ with .subAccount.RemainingTrialDays }}
+        <p class="note">
+            Your trial period ends in <strong>{{ . }}</strong> days.
+        </p>
+        {{ else }}
+        <p class="note">
+            <strong>Important: </strong>
+            You currently don't have an active subscription! This means you can access
+            your existing data on Padlock Cloud but you won't be able to upload any new data
+            or synchronize changes between devices.
+        </p>
+        {{ end }}
+        <form action="/subscribe/" method="POST">
+            <script
+                src="https://checkout.stripe.com/checkout.js" class="stripe-button"
+                data-key="pk_test_jTF9rjIV9LyiyJ6ir2ARE8Oy"
+                data-amount="499"
+                data-name="Padlock Cloud"
+                data-description="Monthly Subscription"
+                data-image="/static/img/padlock-cloud.svg"
+                data-locale="auto"
+                data-email="{{ .account.Email }}"
+                data-allow-remember-me="false"
+                data-bitcoin="true"
+                data-label="Get Monthly Subscription"
+                data-panel-label="Get For {{`{{`}}amount{{`}}`}}/Month">
+            </script>
+        </form>
+    {{ end }}
+</section>
+
+{{ template "dashboard-manage-account" . }}
+{{ template "dashboard-manage-devices" . }}
+
+{{ end }}

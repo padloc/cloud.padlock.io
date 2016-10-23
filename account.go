@@ -1,13 +1,12 @@
 package main
 
 import "encoding/json"
+import "time"
 
 type Account struct {
-	Email string
-	Plans struct {
-		Free   *FreePlan
-		Itunes *ItunesPlan
-	}
+	Email        string
+	Created      time.Time
+	Subscription *Subscription
 }
 
 // Implements the `Key` method of the `Storable` interface
@@ -25,7 +24,26 @@ func (acc *Account) Serialize() ([]byte, error) {
 	return json.Marshal(acc)
 }
 
-func (acc *Account) HasActivePlan() bool {
-	return (acc.Plans.Free != nil && acc.Plans.Free.Active()) ||
-		(acc.Plans.Itunes != nil && acc.Plans.Itunes.Active())
+func (acc *Account) HasActiveSubscription() bool {
+	return acc.Subscription != nil && acc.Subscription.Active()
+}
+
+func (acc *Account) RemainingTrialPeriod() time.Duration {
+	remaining := acc.Created.Add(24 * 30 * time.Hour).Sub(time.Now())
+	if remaining < 0 {
+		return 0
+	} else {
+		return remaining
+	}
+}
+
+func (acc *Account) RemainingTrialDays() int {
+	return int(acc.RemainingTrialPeriod().Hours()/24) + 1
+}
+
+func NewAccount(email string) *Account {
+	return &Account{
+		Email:   email,
+		Created: time.Now(),
+	}
 }
