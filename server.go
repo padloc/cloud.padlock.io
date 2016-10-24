@@ -32,6 +32,13 @@ func (server *Server) InitEndpoints() {
 		Handlers: map[string]pc.Handler{
 			"POST": &Subscribe{server},
 		},
+		AuthType: "web",
+	}
+
+	server.Server.Endpoints["/stripehook/"] = &pc.Endpoint{
+		Handlers: map[string]pc.Handler{
+			"POST": &StripeHook{server},
+		},
 	}
 }
 

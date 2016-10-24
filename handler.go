@@ -2,6 +2,7 @@ package main
 
 import "net/http"
 import "bytes"
+import "io/ioutil"
 import pc "github.com/maklesoft/padlock-cloud/padlockcloud"
 
 type Dashboard struct {
@@ -61,5 +62,18 @@ func (h *Subscribe) Handle(w http.ResponseWriter, r *http.Request, a *pc.AuthTok
 
 	http.Redirect(w, r, "/dashboard/?subscribed=1", http.StatusFound)
 
+	return nil
+}
+
+type StripeHook struct {
+	*Server
+}
+
+func (h *StripeHook) Handle(w http.ResponseWriter, r *http.Request, a *pc.AuthToken) error {
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		return err
+	}
+	h.Info.Println(string(body))
 	return nil
 }
