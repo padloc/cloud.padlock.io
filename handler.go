@@ -1,9 +1,15 @@
 package main
 
-import "net/http"
-import "bytes"
-import "io/ioutil"
-import pc "github.com/maklesoft/padlock-cloud/padlockcloud"
+import (
+	"bytes"
+	"encoding/json"
+	pc "github.com/maklesoft/padlock-cloud/padlockcloud"
+	"github.com/stripe/stripe-go"
+	"github.com/stripe/stripe-go/sub"
+	"io/ioutil"
+	"net/http"
+	"strings"
+)
 
 type Dashboard struct {
 	*Server
@@ -74,6 +80,20 @@ func (h *StripeHook) Handle(w http.ResponseWriter, r *http.Request, a *pc.AuthTo
 	if err != nil {
 		return err
 	}
-	h.Info.Println(string(body))
+	event := &stripe.Event{}
+	if err := json.Unmarshal(body, event); err != nil {
+		return err
+	}
+	h.Info.Println(event.Type)
+	if strings.HasPrefix(event.Type, "customer.subscription") {
+		params := &stripe.SubParams{}
+		params.Expand("customer")
+		s, err := sub.Get(event.GetObjValue("id"), params)
+		if err != nil {
+			return err
+		}
+		str, _ := json.Marshal(s)
+		h.Info.Println("updating subscription", string(str))
+	}
 	return nil
 }
