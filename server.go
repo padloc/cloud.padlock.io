@@ -16,7 +16,9 @@ func (server *Server) AccountFromEmail(email string) (*Account, error) {
 		if err != pc.ErrNotFound {
 			return nil, err
 		}
-		acc = NewAccount(email)
+		if acc, err = NewAccount(email); err != nil {
+			return nil, err
+		}
 	}
 	return acc, nil
 }
@@ -32,7 +34,7 @@ func (server *Server) InitEndpoints() {
 		Handlers: map[string]pc.Handler{
 			"POST": &Subscribe{server},
 		},
-		AuthType: "web",
+		// AuthType: "web",
 	}
 
 	server.Server.Endpoints["/stripehook/"] = &pc.Endpoint{

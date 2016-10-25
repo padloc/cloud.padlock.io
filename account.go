@@ -1,12 +1,28 @@
 package main
 
-import "encoding/json"
-import "time"
+import (
+	"encoding/json"
+	"github.com/stripe/stripe-go"
+	"github.com/stripe/stripe-go/customer"
+	"time"
+)
+
+const PlanMonthly = "padlock-cloud-monthly"
 
 type Account struct {
-	Email        string
-	Created      time.Time
-	Subscription *Subscription
+	Email    string
+	Created  time.Time
+	Customer *stripe.Customer
+}
+
+func (acc *Account) Subscription() *stripe.Sub {
+	subs := acc.Customer.Subs.Values
+
+	if len(subs) == 0 {
+		return nil
+	}
+
+	return subs[0]
 }
 
 // Implements the `Key` method of the `Storable` interface
@@ -24,12 +40,47 @@ func (acc *Account) Serialize() ([]byte, error) {
 	return json.Marshal(acc)
 }
 
+func (acc *Account) CreateCustomer() error {
+	params := &stripe.CustomerParams{
+		Email: acc.Email,
+		Plan:  PlanMonthly,
+	}
+
+	var err error
+	acc.Customer, err = customer.New(params)
+
+	return err
+}
+
+func (acc *Account) SetPaymentSource(token string) error {
+	params := &stripe.CustomerParams{}
+	params.SetSource(token)
+
+	var err error
+	acc.Customer, err = customer.Update(acc.Customer.ID, params)
+	return err
+}
+
+func (acc *Account) RefreshCustomer() error {
+	var err error
+	acc.Customer, err = customer.Get(acc.Customer.ID, nil)
+	return err
+}
+
 func (acc *Account) HasActiveSubscription() bool {
-	return acc.Subscription != nil && acc.Subscription.Active()
+	sub := acc.Subscription()
+	return sub != nil && sub.Status == "active"
 }
 
 func (acc *Account) RemainingTrialPeriod() time.Duration {
-	remaining := acc.Created.Add(24 * 30 * time.Hour).Sub(time.Now())
+	sub := acc.Subscription()
+
+	if sub == nil {
+		return 0
+	}
+
+	trialEnd := time.Unix(sub.TrialEnd, 0)
+	remaining := trialEnd.Sub(time.Now())
 	if remaining < 0 {
 		return 0
 	} else {
@@ -41,9 +92,19 @@ func (acc *Account) RemainingTrialDays() int {
 	return int(acc.RemainingTrialPeriod().Hours()/24) + 1
 }
 
-func NewAccount(email string) *Account {
-	return &Account{
+func NewAccount(email string) (*Account, error) {
+	acc := &Account{
 		Email:   email,
 		Created: time.Now(),
 	}
+
+	if err := acc.CreateCustomer(); err != nil {
+		return nil, err
+	}
+
+	return acc, nil
+}
+
+func init() {
+	stripe.Key = "sk_test_x6LQWbCbcOVtLigVGzf5X5Bc"
 }

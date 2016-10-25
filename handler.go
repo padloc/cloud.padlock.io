@@ -5,10 +5,8 @@ import (
 	"encoding/json"
 	pc "github.com/maklesoft/padlock-cloud/padlockcloud"
 	"github.com/stripe/stripe-go"
-	"github.com/stripe/stripe-go/sub"
 	"io/ioutil"
 	"net/http"
-	"strings"
 )
 
 type Dashboard struct {
@@ -42,25 +40,25 @@ type Subscribe struct {
 }
 
 func (h *Subscribe) Handle(w http.ResponseWriter, r *http.Request, a *pc.AuthToken) error {
+	if a == nil {
+		return &pc.InvalidAuthToken{}
+	}
+
 	token := r.PostFormValue("stripeToken")
 
 	if token == "" {
 		return &pc.BadRequest{"No stripe token provided"}
 	}
 
-	sub, err := NewSubscription(token)
+	acc := a.Account()
+	subAcc, err := h.AccountFromEmail(acc.Email)
 	if err != nil {
 		return err
 	}
 
-	acc := a.Account()
-
-	subAcc := &Account{Email: acc.Email}
-	if err := h.Storage.Get(subAcc); err != nil && err != pc.ErrNotFound {
+	if err := subAcc.SetPaymentSource(token); err != nil {
 		return err
 	}
-
-	subAcc.Subscription = sub
 
 	if err := h.Storage.Put(subAcc); err != nil {
 		return err
@@ -84,16 +82,33 @@ func (h *StripeHook) Handle(w http.ResponseWriter, r *http.Request, a *pc.AuthTo
 	if err := json.Unmarshal(body, event); err != nil {
 		return err
 	}
-	h.Info.Println(event.Type)
-	if strings.HasPrefix(event.Type, "customer.subscription") {
-		params := &stripe.SubParams{}
-		params.Expand("customer")
-		s, err := sub.Get(event.GetObjValue("id"), params)
+	h.Info.Println("event", body)
+	//
+	// if strings.HasPrefix(event.Type, "customer.subscription") {
+	// 	params := &stripe.SubParams{}
+	// 	params.Expand("customer")
+	// 	s, err := sub.Get(event.GetObjValue("id"), params)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// 	str, _ := json.Marshal(s)
+	// 	h.Info.Println("subscription updated", string(str))
+	// }
+
+	switch event.Type {
+	case "customer.created", "customer.updated":
+		acc, err := h.AccountFromEmail(event.GetObjValue("email"))
 		if err != nil {
 			return err
 		}
-		str, _ := json.Marshal(s)
-		h.Info.Println("updating subscription", string(str))
+
+		if err := acc.RefreshCustomer(); err != nil {
+			return err
+		}
+
+		str, _ := json.Marshal(acc.Customer)
+		h.Info.Println("customer updated", string(str))
 	}
+
 	return nil
 }
