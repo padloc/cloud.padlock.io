@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	pc "github.com/maklesoft/padlock-cloud/padlockcloud"
 	"github.com/stripe/stripe-go"
+	"github.com/stripe/stripe-go/customer"
+	"github.com/stripe/stripe-go/sub"
 	"io/ioutil"
 	"net/http"
 )
@@ -50,17 +52,37 @@ func (h *Subscribe) Handle(w http.ResponseWriter, r *http.Request, a *pc.AuthTok
 		return &pc.BadRequest{"No stripe token provided"}
 	}
 
-	acc := a.Account()
-	subAcc, err := h.AccountFromEmail(acc.Email)
+	acc, err := h.AccountFromEmail(a.Account().Email)
 	if err != nil {
 		return err
 	}
 
-	if err := subAcc.SetPaymentSource(token); err != nil {
+	if err := acc.SetPaymentSource(token); err != nil {
 		return err
 	}
 
-	if err := h.Storage.Put(subAcc); err != nil {
+	s := acc.Subscription()
+	if s == nil {
+		var err error
+		if s, err = sub.New(&stripe.SubParams{
+			Customer:    acc.Customer.ID,
+			Plan:        PlanMonthly,
+			TrialEndNow: true,
+		}); err != nil {
+			return err
+		}
+		acc.Customer.Subs.Values = []*stripe.Sub{s}
+	} else {
+		if s_, err := sub.Update(s.ID, &stripe.SubParams{
+			TrialEndNow: true,
+		}); err != nil {
+			return err
+		} else {
+			*s = *s_
+		}
+	}
+
+	if err := h.Storage.Put(acc); err != nil {
 		return err
 	}
 
@@ -82,27 +104,34 @@ func (h *StripeHook) Handle(w http.ResponseWriter, r *http.Request, a *pc.AuthTo
 	if err := json.Unmarshal(body, event); err != nil {
 		return err
 	}
-	h.Info.Println("event", body)
-	//
-	// if strings.HasPrefix(event.Type, "customer.subscription") {
-	// 	params := &stripe.SubParams{}
-	// 	params.Expand("customer")
-	// 	s, err := sub.Get(event.GetObjValue("id"), params)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	str, _ := json.Marshal(s)
-	// 	h.Info.Println("subscription updated", string(str))
-	// }
+
+	h.Info.Println(event.Type)
+
+	var c *stripe.Customer
 
 	switch event.Type {
 	case "customer.created", "customer.updated":
-		acc, err := h.AccountFromEmail(event.GetObjValue("email"))
+		c = &stripe.Customer{}
+		if err := json.Unmarshal(event.Data.Raw, c); err != nil {
+			return err
+		}
+
+	case "customer.subscription.created", "customer.subscription.updated", "customer.subscription.deleted":
+		var err error
+		if c, err = customer.Get(event.GetObjValue("customer"), nil); err != nil {
+			return err
+		}
+	}
+
+	if c != nil {
+		acc, err := h.AccountFromEmail(c.Email)
 		if err != nil {
 			return err
 		}
 
-		if err := acc.RefreshCustomer(); err != nil {
+		acc.Customer = c
+
+		if err := h.Storage.Put(acc); err != nil {
 			return err
 		}
 

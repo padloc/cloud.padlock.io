@@ -19,6 +19,9 @@ func (server *Server) AccountFromEmail(email string) (*Account, error) {
 		if acc, err = NewAccount(email); err != nil {
 			return nil, err
 		}
+		if err = server.Storage.Put(acc); err != nil {
+			return nil, err
+		}
 	}
 	return acc, nil
 }

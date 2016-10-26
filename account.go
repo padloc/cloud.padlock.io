@@ -61,12 +61,6 @@ func (acc *Account) SetPaymentSource(token string) error {
 	return err
 }
 
-func (acc *Account) RefreshCustomer() error {
-	var err error
-	acc.Customer, err = customer.Get(acc.Customer.ID, nil)
-	return err
-}
-
 func (acc *Account) HasActiveSubscription() bool {
 	sub := acc.Subscription()
 	return sub != nil && sub.Status == "active"
