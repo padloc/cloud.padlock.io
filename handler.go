@@ -26,9 +26,10 @@ func (h *Dashboard) Handle(w http.ResponseWriter, r *http.Request, auth *pc.Auth
 	if err := h.Templates.Dashboard.Execute(&b, map[string]interface{}{
 		"account":          acc,
 		"subAccount":       subAcc,
-		"paired":           r.URL.Query()["paired"],
-		"subscribed":       r.URL.Query()["subscribed"],
-		"unsubscribed":     r.URL.Query()["unsubscribed"],
+		"paired":           r.URL.Query().Get("paired"),
+		"subscribed":       r.URL.Query().Get("subscribed"),
+		"unsubscribed":     r.URL.Query().Get("unsubscribed"),
+		"action":           r.URL.Query().Get("action"),
 		pc.CSRFTemplateTag: pc.CSRFTemplateField(r),
 	}); err != nil {
 		return err

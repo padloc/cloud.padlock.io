@@ -19,10 +19,19 @@
             You are currently subscribed to the <strong>monthly plan</strong>, giving you full access
             to Padlock Cloud and all of its features!
         </p>
+        {{ if eq .action "unsubscribe" }}
+        <p class="note">
+            Are you sure you want to cancel your subscription? Without an active subscription your access
+            will be read-only, which means you won't be able to upload any new data or synchronize changes
+            between devices!
+        </p>
         <form action="/unsubscribe/" method="POST">
             {{ .csrfField }}
             <button>Cancel Subscription</button>
         </form>
+        {{ else }}
+            <a href=".?action=unsubscribe">Cancel Subscription</a>
+        {{ end }}
     {{ else }}
         {{ if .subAccount.RemainingTrialPeriod }}
         <p class="note">
