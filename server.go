@@ -32,12 +32,18 @@ func (server *Server) InitEndpoints() {
 
 	server.Endpoints["/dashboard/"].Handlers["GET"] = &Dashboard{server}
 
-	// Endpoint for validating purchase receipts, only POST method is supported
 	server.Server.Endpoints["/subscribe/"] = &pc.Endpoint{
 		Handlers: map[string]pc.Handler{
 			"POST": &Subscribe{server},
 		},
 		// AuthType: "web",
+	}
+
+	server.Server.Endpoints["/unsubscribe/"] = &pc.Endpoint{
+		Handlers: map[string]pc.Handler{
+			"POST": &Unsubscribe{server},
+		},
+		AuthType: "web",
 	}
 
 	server.Server.Endpoints["/stripehook/"] = &pc.Endpoint{

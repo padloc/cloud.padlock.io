@@ -4,28 +4,47 @@
 
 <section>
     <h2>Manage Subscriptions</h2>
+    {{ if .subscribed }}
+        <p class="note">
+            Subscription added successfully!
+        </p>
+    {{ end }}
+    {{ if .unsubscribed }}
+        <p class="note">
+            Subscription canceled successfully!
+        </p>
+    {{ end }}
     {{ if .subAccount.HasActiveSubscription }}
         <p>
-            You are currently subscribed to the <strong>monthly</strong> plan.
+            You are currently subscribed to the <strong>monthly plan</strong>, giving you full access
+            to Padlock Cloud and all of its features!
         </p>
+        <form action="/unsubscribe/" method="POST">
+            {{ .csrfField }}
+            <button>Cancel Subscription</button>
+        </form>
     {{ else }}
-        {{ with .subAccount.RemainingTrialDays }}
+        {{ if .subAccount.RemainingTrialPeriod }}
         <p class="note">
-            Your trial period ends in <strong>{{ . }}</strong> days.
+            <strong>Your trial period ends in {{ .subAccount.RemainingTrialDays }} days.</strong>
+            After this period, your access will be read-only, which means you will be able to access
+            your existing data on Padlock Cloud but you won't be able to upload any new data or synchronize
+            changes between devices. Get a subscription now to get unlimited access to Padlock Cloud!
         </p>
         {{ else }}
         <p class="note">
             <strong>Important: </strong>
             You currently don't have an active subscription! This means you can access
             your existing data on Padlock Cloud but you won't be able to upload any new data
-            or synchronize changes between devices.
+            or synchronize changes between devices. Get a subscription now to regain full access
+            to Padlock Cloud!
         </p>
         {{ end }}
         <form action="/subscribe/" method="POST">
             <script
                 src="https://checkout.stripe.com/checkout.js" class="stripe-button"
                 data-key="pk_test_jTF9rjIV9LyiyJ6ir2ARE8Oy"
-                data-amount="499"
+                data-amount="399"
                 data-name="Padlock Cloud"
                 data-description="Monthly Subscription"
                 data-image="/static/img/padlock-cloud.svg"

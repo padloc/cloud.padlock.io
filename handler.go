@@ -28,6 +28,7 @@ func (h *Dashboard) Handle(w http.ResponseWriter, r *http.Request, auth *pc.Auth
 		"subAccount":       subAcc,
 		"paired":           r.URL.Query()["paired"],
 		"subscribed":       r.URL.Query()["subscribed"],
+		"unsubscribed":     r.URL.Query()["unsubscribed"],
 		pc.CSRFTemplateTag: pc.CSRFTemplateField(r),
 	}); err != nil {
 		return err
@@ -87,6 +88,37 @@ func (h *Subscribe) Handle(w http.ResponseWriter, r *http.Request, a *pc.AuthTok
 	}
 
 	http.Redirect(w, r, "/dashboard/?subscribed=1", http.StatusFound)
+
+	return nil
+}
+
+type Unsubscribe struct {
+	*Server
+}
+
+func (h *Unsubscribe) Handle(w http.ResponseWriter, r *http.Request, a *pc.AuthToken) error {
+	acc, err := h.AccountFromEmail(a.Account().Email)
+	if err != nil {
+		return err
+	}
+
+	s := acc.Subscription()
+
+	if s == nil {
+		return &pc.BadRequest{"This account does not have an active subscription"}
+	}
+
+	if s_, err := sub.Cancel(s.ID, nil); err != nil {
+		return err
+	} else {
+		*s = *s_
+	}
+
+	if err := h.Storage.Put(acc); err != nil {
+		return err
+	}
+
+	http.Redirect(w, r, "/dashboard/?unsubscribed=1", http.StatusFound)
 
 	return nil
 }
