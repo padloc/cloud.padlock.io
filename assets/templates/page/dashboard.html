@@ -2,6 +2,8 @@
 
 {{ define "main" }}
 
+{{ template "dashboard-manage-account" . }}
+
 <section>
     <h2>Manage Subscriptions</h2>
     {{ if .subscribed }}
@@ -67,7 +69,6 @@
     {{ end }}
 </section>
 
-{{ template "dashboard-manage-account" . }}
 {{ template "dashboard-manage-devices" . }}
 
 {{ end }}

@@ -7,7 +7,7 @@ type SubscriptionRequired struct {
 }
 
 func (e *SubscriptionRequired) Code() string {
-	return "plan_required"
+	return "subscription_required"
 }
 
 func (e *SubscriptionRequired) Error() string {

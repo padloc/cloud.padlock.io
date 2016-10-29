@@ -27,8 +27,13 @@ func (server *Server) AccountFromEmail(email string) (*Account, error) {
 }
 
 func (server *Server) InitEndpoints() {
+	auth := server.Endpoints["/auth/"]
+	auth.Handlers["PUT"] = (&CheckSubscription{server, false}).Wrap(auth.Handlers["PUT"])
+	auth.Handlers["POST"] = (&CheckSubscription{server, false}).Wrap(auth.Handlers["POST"])
+
 	store := server.Endpoints["/store/"]
-	store.Handlers["PUT"] = (&CheckSubscription{server}).Wrap(store.Handlers["PUT"])
+	store.Handlers["GET"] = (&CheckSubscription{server, false}).Wrap(store.Handlers["GET"])
+	store.Handlers["PUT"] = (&CheckSubscription{server, true}).Wrap(store.Handlers["PUT"])
 
 	server.Endpoints["/dashboard/"].Handlers["GET"] = &Dashboard{server}
 
