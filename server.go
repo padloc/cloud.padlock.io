@@ -33,6 +33,7 @@ func (server *Server) InitEndpoints() {
 
 	store := server.Endpoints["/store/"]
 	store.Handlers["GET"] = (&CheckSubscription{server, false}).Wrap(store.Handlers["GET"])
+	store.Handlers["HEAD"] = (&CheckSubscription{server, false}).Wrap(store.Handlers["HEAD"])
 	store.Handlers["PUT"] = (&CheckSubscription{server, true}).Wrap(store.Handlers["PUT"])
 
 	server.Endpoints["/dashboard/"].Handlers["GET"] = &Dashboard{server}
