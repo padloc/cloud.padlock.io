@@ -1,0 +1,230 @@
+{
+	"comment": "",
+	"ignore": "test",
+	"package": [
+		{
+			"checksumSHA1": "OzddgAh0uv3ukKhWW7QFUEFbxow=",
+			"origin": "github.com/maklesoft/padlock-cloud/vendor/github.com/golang/snappy",
+			"path": "github.com/golang/snappy",
+			"revision": "0920dd3815aff935df5cd48521563d13885f8337",
+			"revisionTime": "2016-10-30T09:30:41Z"
+		},
+		{
+			"checksumSHA1": "g/V4qrXjUGG9B+e3hB+4NAYJ5Gs=",
+			"origin": "github.com/maklesoft/padlock-cloud/vendor/github.com/gorilla/context",
+			"path": "github.com/gorilla/context",
+			"revision": "0920dd3815aff935df5cd48521563d13885f8337",
+			"revisionTime": "2016-10-30T09:30:41Z"
+		},
+		{
+			"checksumSHA1": "WM2EnJ5GBsHmT8W/fgvlZmfbEDw=",
+			"origin": "github.com/maklesoft/padlock-cloud/vendor/github.com/gorilla/csrf",
+			"path": "github.com/gorilla/csrf",
+			"revision": "0920dd3815aff935df5cd48521563d13885f8337",
+			"revisionTime": "2016-10-30T09:30:41Z"
+		},
+		{
+			"checksumSHA1": "nZoAsxDHOA8fLilA56HKvezLqNU=",
+			"origin": "github.com/maklesoft/padlock-cloud/vendor/github.com/gorilla/securecookie",
+			"path": "github.com/gorilla/securecookie",
+			"revision": "0920dd3815aff935df5cd48521563d13885f8337",
+			"revisionTime": "2016-10-30T09:30:41Z"
+		},
+		{
+			"checksumSHA1": "d9PxF1XQGLMJZRct2R8qVM/eYlE=",
+			"origin": "github.com/maklesoft/padlock-cloud/vendor/github.com/hashicorp/golang-lru",
+			"path": "github.com/hashicorp/golang-lru",
+			"revision": "0920dd3815aff935df5cd48521563d13885f8337",
+			"revisionTime": "2016-10-30T09:30:41Z"
+		},
+		{
+			"checksumSHA1": "2nOpYjx8Sn57bqlZq17yM4YJuM4=",
+			"origin": "github.com/maklesoft/padlock-cloud/vendor/github.com/hashicorp/golang-lru/simplelru",
+			"path": "github.com/hashicorp/golang-lru/simplelru",
+			"revision": "0920dd3815aff935df5cd48521563d13885f8337",
+			"revisionTime": "2016-10-30T09:30:41Z"
+		},
+		{
+			"checksumSHA1": "lDmSf/MAeY+Ifm1jDN3DPX0F1h0=",
+			"path": "github.com/maklesoft/padlock-cloud",
+			"revision": "0920dd3815aff935df5cd48521563d13885f8337",
+			"revisionTime": "2016-10-30T09:30:41Z"
+		},
+		{
+			"checksumSHA1": "TEsPG2oF6leK7Ta81V3ZiBLZZyk=",
+			"path": "github.com/maklesoft/padlock-cloud/padlockcloud",
+			"revision": "13abefb661b7dbf1b98890f8bd8eabb7f3b39df3",
+			"revisionTime": "2016-10-30T12:05:12Z"
+		},
+		{
+			"checksumSHA1": "Hky3u+8Rqum+wB5BHMj0A8ZmT4g=",
+			"origin": "github.com/maklesoft/padlock-cloud/vendor/github.com/pkg/errors",
+			"path": "github.com/pkg/errors",
+			"revision": "0920dd3815aff935df5cd48521563d13885f8337",
+			"revisionTime": "2016-10-30T09:30:41Z"
+		},
+		{
+			"checksumSHA1": "IAg7PcqaEf/TL1KNqZB0FTEb778=",
+			"origin": "github.com/maklesoft/padlock-cloud/vendor/github.com/rs/cors",
+			"path": "github.com/rs/cors",
+			"revision": "0920dd3815aff935df5cd48521563d13885f8337",
+			"revisionTime": "2016-10-30T09:30:41Z"
+		},
+		{
+			"checksumSHA1": "uEgHSdDVcceCTdH3WSC/p9QKm0k=",
+			"origin": "github.com/maklesoft/padlock-cloud/vendor/github.com/rs/xhandler",
+			"path": "github.com/rs/xhandler",
+			"revision": "0920dd3815aff935df5cd48521563d13885f8337",
+			"revisionTime": "2016-10-30T09:30:41Z"
+		},
+		{
+			"checksumSHA1": "fUBULAAIG9gtfTmtHeLeN+IFbjg=",
+			"path": "github.com/stripe/stripe-go",
+			"revision": "80f843e54ca520ed9fffbc11251e56f6beff7c1d",
+			"revisionTime": "2016-10-18T21:39:04Z"
+		},
+		{
+			"checksumSHA1": "g4KO1AUv2DhohGAE51AkwCbF5nY=",
+			"path": "github.com/stripe/stripe-go/customer",
+			"revision": "80f843e54ca520ed9fffbc11251e56f6beff7c1d",
+			"revisionTime": "2016-10-18T21:39:04Z"
+		},
+		{
+			"checksumSHA1": "y5AD80EvDutFqGuAYsBtcya6ntM=",
+			"path": "github.com/stripe/stripe-go/orderitem",
+			"revision": "80f843e54ca520ed9fffbc11251e56f6beff7c1d",
+			"revisionTime": "2016-10-18T21:39:04Z"
+		},
+		{
+			"checksumSHA1": "wDtq+7B5Im5d2T6wVtM9Zc5krjg=",
+			"path": "github.com/stripe/stripe-go/sub",
+			"revision": "80f843e54ca520ed9fffbc11251e56f6beff7c1d",
+			"revisionTime": "2016-10-18T21:39:04Z"
+		},
+		{
+			"checksumSHA1": "gAbBMXBHsWGR/2YnCgk2tvRC/Xw=",
+			"origin": "github.com/maklesoft/padlock-cloud/vendor/github.com/syndtr/goleveldb/leveldb",
+			"path": "github.com/syndtr/goleveldb/leveldb",
+			"revision": "0920dd3815aff935df5cd48521563d13885f8337",
+			"revisionTime": "2016-10-30T09:30:41Z"
+		},
+		{
+			"checksumSHA1": "ivcxSNaMtNbNZoPMxslm60h0oxw=",
+			"origin": "github.com/maklesoft/padlock-cloud/vendor/github.com/syndtr/goleveldb/leveldb/cache",
+			"path": "github.com/syndtr/goleveldb/leveldb/cache",
+			"revision": "0920dd3815aff935df5cd48521563d13885f8337",
+			"revisionTime": "2016-10-30T09:30:41Z"
+		},
+		{
+			"checksumSHA1": "5KPgnvCPlR0ysDAqo6jApzRQ3tw=",
+			"origin": "github.com/maklesoft/padlock-cloud/vendor/github.com/syndtr/goleveldb/leveldb/comparer",
+			"path": "github.com/syndtr/goleveldb/leveldb/comparer",
+			"revision": "0920dd3815aff935df5cd48521563d13885f8337",
+			"revisionTime": "2016-10-30T09:30:41Z"
+		},
+		{
+			"checksumSHA1": "fN497lLW+8s95VMEXBdvo6euVLI=",
+			"origin": "github.com/maklesoft/padlock-cloud/vendor/github.com/syndtr/goleveldb/leveldb/errors",
+			"path": "github.com/syndtr/goleveldb/leveldb/errors",
+			"revision": "0920dd3815aff935df5cd48521563d13885f8337",
+			"revisionTime": "2016-10-30T09:30:41Z"
+		},
+		{
+			"checksumSHA1": "eqKeD6DS7eNCtxVYZEHHRKkyZrw=",
+			"origin": "github.com/maklesoft/padlock-cloud/vendor/github.com/syndtr/goleveldb/leveldb/filter",
+			"path": "github.com/syndtr/goleveldb/leveldb/filter",
+			"revision": "0920dd3815aff935df5cd48521563d13885f8337",
+			"revisionTime": "2016-10-30T09:30:41Z"
+		},
+		{
+			"checksumSHA1": "cRn09EwfU3k2ZjvClHYmVFlakRY=",
+			"origin": "github.com/maklesoft/padlock-cloud/vendor/github.com/syndtr/goleveldb/leveldb/iterator",
+			"path": "github.com/syndtr/goleveldb/leveldb/iterator",
+			"revision": "0920dd3815aff935df5cd48521563d13885f8337",
+			"revisionTime": "2016-10-30T09:30:41Z"
+		},
+		{
+			"checksumSHA1": "6UUddO1LxE2XvZrFLML8UYxcNH8=",
+			"origin": "github.com/maklesoft/padlock-cloud/vendor/github.com/syndtr/goleveldb/leveldb/journal",
+			"path": "github.com/syndtr/goleveldb/leveldb/journal",
+			"revision": "0920dd3815aff935df5cd48521563d13885f8337",
+			"revisionTime": "2016-10-30T09:30:41Z"
+		},
+		{
+			"checksumSHA1": "LshzRv+3spfwuHLepRxiyjf/3sQ=",
+			"origin": "github.com/maklesoft/padlock-cloud/vendor/github.com/syndtr/goleveldb/leveldb/memdb",
+			"path": "github.com/syndtr/goleveldb/leveldb/memdb",
+			"revision": "0920dd3815aff935df5cd48521563d13885f8337",
+			"revisionTime": "2016-10-30T09:30:41Z"
+		},
+		{
+			"checksumSHA1": "RDHx3eCcgLNgxdmoSopQP4GrvO0=",
+			"origin": "github.com/maklesoft/padlock-cloud/vendor/github.com/syndtr/goleveldb/leveldb/opt",
+			"path": "github.com/syndtr/goleveldb/leveldb/opt",
+			"revision": "0920dd3815aff935df5cd48521563d13885f8337",
+			"revisionTime": "2016-10-30T09:30:41Z"
+		},
+		{
+			"checksumSHA1": "rCr1faK7Bj3FRJVTONBUSFIuWLw=",
+			"origin": "github.com/maklesoft/padlock-cloud/vendor/github.com/syndtr/goleveldb/leveldb/storage",
+			"path": "github.com/syndtr/goleveldb/leveldb/storage",
+			"revision": "0920dd3815aff935df5cd48521563d13885f8337",
+			"revisionTime": "2016-10-30T09:30:41Z"
+		},
+		{
+			"checksumSHA1": "VygDrZVbOvkfC82Snan5QM5mhDM=",
+			"origin": "github.com/maklesoft/padlock-cloud/vendor/github.com/syndtr/goleveldb/leveldb/table",
+			"path": "github.com/syndtr/goleveldb/leveldb/table",
+			"revision": "0920dd3815aff935df5cd48521563d13885f8337",
+			"revisionTime": "2016-10-30T09:30:41Z"
+		},
+		{
+			"checksumSHA1": "FmE6QSxe8QqI1R6HWdyTotwVHm8=",
+			"origin": "github.com/maklesoft/padlock-cloud/vendor/github.com/syndtr/goleveldb/leveldb/util",
+			"path": "github.com/syndtr/goleveldb/leveldb/util",
+			"revision": "0920dd3815aff935df5cd48521563d13885f8337",
+			"revisionTime": "2016-10-30T09:30:41Z"
+		},
+		{
+			"checksumSHA1": "9jjO5GjLa0XF/nfWihF02RoH4qc=",
+			"origin": "github.com/maklesoft/padlock-cloud/vendor/golang.org/x/net/context",
+			"path": "golang.org/x/net/context",
+			"revision": "0920dd3815aff935df5cd48521563d13885f8337",
+			"revisionTime": "2016-10-30T09:30:41Z"
+		},
+		{
+			"checksumSHA1": "xvUCUatbky/OjZDvSkWbxMca1vc=",
+			"origin": "github.com/maklesoft/padlock-cloud/vendor/gopkg.in/throttled/throttled.v2",
+			"path": "gopkg.in/throttled/throttled.v2",
+			"revision": "0920dd3815aff935df5cd48521563d13885f8337",
+			"revisionTime": "2016-10-30T09:30:41Z"
+		},
+		{
+			"checksumSHA1": "4bnCXkKPIICJ6H22zT1G9RBFyZw=",
+			"origin": "github.com/maklesoft/padlock-cloud/vendor/gopkg.in/throttled/throttled.v2/store/memstore",
+			"path": "gopkg.in/throttled/throttled.v2/store/memstore",
+			"revision": "0920dd3815aff935df5cd48521563d13885f8337",
+			"revisionTime": "2016-10-30T09:30:41Z"
+		},
+		{
+			"checksumSHA1": "hiOUviIMDKo7y918uBiEhfJyOkk=",
+			"origin": "github.com/maklesoft/padlock-cloud/vendor/gopkg.in/tylerb/graceful.v1",
+			"path": "gopkg.in/tylerb/graceful.v1",
+			"revision": "0920dd3815aff935df5cd48521563d13885f8337",
+			"revisionTime": "2016-10-30T09:30:41Z"
+		},
+		{
+			"checksumSHA1": "hi6sSeRj+oyvsd+VqeSW4x9ET4U=",
+			"path": "gopkg.in/urfave/cli.v1",
+			"revision": "1efa31f08b9333f1bd4882d61f9d668a70cd902e",
+			"revisionTime": "2016-06-28T05:30:56Z"
+		},
+		{
+			"checksumSHA1": "yV+2de12Q/t09hBGYGKEOFr1/zc=",
+			"path": "gopkg.in/yaml.v2",
+			"revision": "e4d366fc3c7938e2958e662b4258c7a89e1f0e3e",
+			"revisionTime": "2016-07-15T03:37:55Z"
+		}
+	],
+	"rootPath": "github.com/maklesoft/cloud.padlock.io"
+}
