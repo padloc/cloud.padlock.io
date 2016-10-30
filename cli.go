@@ -8,6 +8,7 @@ import "gopkg.in/urfave/cli.v1"
 import pc "github.com/maklesoft/padlock-cloud/padlockcloud"
 
 type CliConfig struct {
+	Stripe StripeConfig `yaml:"stripe"`
 }
 
 func (c *CliConfig) LoadFromFile(path string) error {
@@ -33,6 +34,7 @@ type CliApp struct {
 
 func (cliApp *CliApp) InitConfig() {
 	cliApp.Config = &CliConfig{}
+	cliApp.Server.StripeConfig = &cliApp.Config.Stripe
 }
 
 func (cliApp *CliApp) RunServer(context *cli.Context) error {
@@ -134,9 +136,24 @@ func NewCliApp() *CliApp {
 		nil,
 	}
 	app.InitConfig()
-	// config := app.Config
+	config := app.Config
 
-	app.Flags = append(app.Flags, []cli.Flag{}...)
+	app.Flags = append(app.Flags, []cli.Flag{
+		cli.StringFlag{
+			Name:        "stripe-secret-key",
+			Value:       "",
+			Usage:       "Stripe secret key",
+			EnvVar:      "PC_STRIPE_SECRET_KEY",
+			Destination: &config.Stripe.SecretKey,
+		},
+		cli.StringFlag{
+			Name:        "stripe-public-key",
+			Value:       "",
+			Usage:       "Stripe public key",
+			EnvVar:      "PC_STRIPE_PUBLIC_KEY",
+			Destination: &config.Stripe.PublicKey,
+		},
+	}...)
 
 	runserverCmd := &app.Commands[0]
 	runserverCmd.Action = app.RunServer

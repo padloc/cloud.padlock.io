@@ -98,7 +98,3 @@ func NewAccount(email string) (*Account, error) {
 
 	return acc, nil
 }
-
-func init() {
-	stripe.Key = "sk_test_x6LQWbCbcOVtLigVGzf5X5Bc"
-}

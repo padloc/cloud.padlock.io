@@ -26,6 +26,7 @@ func (h *Dashboard) Handle(w http.ResponseWriter, r *http.Request, auth *pc.Auth
 	if err := h.Templates.Dashboard.Execute(&b, map[string]interface{}{
 		"account":          acc,
 		"subAccount":       subAcc,
+		"stripePublicKey":  h.StripeConfig.PublicKey,
 		"paired":           r.URL.Query().Get("paired"),
 		"revoked":          r.URL.Query().Get("revoked"),
 		"subscribed":       r.URL.Query().Get("subscribed"),

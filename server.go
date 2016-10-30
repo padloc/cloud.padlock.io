@@ -5,9 +5,15 @@ import "github.com/stripe/stripe-go"
 
 import pc "github.com/maklesoft/padlock-cloud/padlockcloud"
 
+type StripeConfig struct {
+	SecretKey string `yaml:"stripe_secret_key"`
+	PublicKey string `yaml:"stripe_public_key"`
+}
+
 type Server struct {
 	*pc.Server
-	Templates *Templates
+	Templates    *Templates
+	StripeConfig *StripeConfig
 }
 
 func (server *Server) AccountFromEmail(email string) (*Account, error) {
@@ -79,6 +85,8 @@ func (server *Server) Init() error {
 			return err
 		}
 	}
+
+	stripe.Key = server.StripeConfig.SecretKey
 
 	return nil
 }

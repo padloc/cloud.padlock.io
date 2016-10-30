@@ -60,7 +60,7 @@
         <form action="/subscribe/" method="POST">
             <script
                 src="https://checkout.stripe.com/checkout.js" class="stripe-button"
-                data-key="pk_test_jTF9rjIV9LyiyJ6ir2ARE8Oy"
+                data-key="{{ .stripePublicKey }}"
                 data-amount="399"
                 data-name="Padlock Cloud"
                 data-description="Monthly Subscription"
