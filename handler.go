@@ -27,6 +27,7 @@ func (h *Dashboard) Handle(w http.ResponseWriter, r *http.Request, auth *pc.Auth
 		"account":          acc,
 		"subAccount":       subAcc,
 		"paired":           r.URL.Query().Get("paired"),
+		"revoked":          r.URL.Query().Get("revoked"),
 		"subscribed":       r.URL.Query().Get("subscribed"),
 		"unsubscribed":     r.URL.Query().Get("unsubscribed"),
 		"datareset":        r.URL.Query().Get("datareset"),

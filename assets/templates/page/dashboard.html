@@ -2,20 +2,26 @@
 
 {{ define "main" }}
 
+<section>
+{{ template "dashboard-notice" . }}
+
+{{ if .subscribed }}
+    <p class="note">
+        Subscription added successfully!
+    </p>
+{{ end }}
+
+{{ if .unsubscribed }}
+    <p class="note">
+        Subscription canceled successfully!
+    </p>
+{{ end }}
+</section>
+
 {{ template "dashboard-manage-account" . }}
 
 <section>
     <h2>Manage Subscriptions</h2>
-    {{ if .subscribed }}
-        <p class="note">
-            Subscription added successfully!
-        </p>
-    {{ end }}
-    {{ if .unsubscribed }}
-        <p class="note">
-            Subscription canceled successfully!
-        </p>
-    {{ end }}
     {{ if .subAccount.HasActiveSubscription }}
         <p>
             You are currently subscribed to the <strong>monthly plan</strong>, giving you full access
