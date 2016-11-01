@@ -93,6 +93,8 @@ func (h *Subscribe) Handle(w http.ResponseWriter, r *http.Request, a *pc.AuthTok
 
 	http.Redirect(w, r, "/dashboard/?subscribed=1", http.StatusFound)
 
+	h.Info.Printf("%s - subcribe - %s\n", pc.FormatRequest(r), acc.Email)
+
 	return nil
 }
 
@@ -124,6 +126,8 @@ func (h *Unsubscribe) Handle(w http.ResponseWriter, r *http.Request, a *pc.AuthT
 
 	http.Redirect(w, r, "/dashboard/?unsubscribed=1", http.StatusFound)
 
+	h.Info.Printf("%s - unsubscribe - %s\n", pc.FormatRequest(r), acc.Email)
+
 	return nil
 }
 
@@ -140,8 +144,6 @@ func (h *StripeHook) Handle(w http.ResponseWriter, r *http.Request, a *pc.AuthTo
 	if err := json.Unmarshal(body, event); err != nil {
 		return err
 	}
-
-	h.Info.Println(event.Type)
 
 	var c *stripe.Customer
 
@@ -171,8 +173,7 @@ func (h *StripeHook) Handle(w http.ResponseWriter, r *http.Request, a *pc.AuthTo
 			return err
 		}
 
-		str, _ := json.Marshal(acc.Customer)
-		h.Info.Println("customer updated", string(str))
+		h.Info.Printf("%s - stripe_hook - %s:%s", pc.FormatRequest(r), acc.Email, event.Type)
 	}
 
 	return nil

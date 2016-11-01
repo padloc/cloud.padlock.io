@@ -43,7 +43,7 @@ func getIp(r *http.Request) string {
 	return ip
 }
 
-func formatRequest(r *http.Request) string {
+func FormatRequest(r *http.Request) string {
 	return fmt.Sprintf("%s %s %s", getIp(r), r.Method, r.URL)
 }
 
@@ -88,6 +88,8 @@ type ServerConfig struct {
 	BaseUrl string `yaml:"base_url"`
 	// Secret used for authenticating cookies
 	Secret string `yaml:"secret"`
+	// Enable Cross-Origin Resource Sharing
+	Cors bool `yaml:"cors"`
 }
 
 // The Server type holds all the contextual data and logic used for running a Padlock Cloud instances
@@ -172,9 +174,9 @@ func (server *Server) Authenticate(r *http.Request) (*AuthToken, error) {
 func (server *Server) LogError(err error, r *http.Request) {
 	switch e := err.(type) {
 	case *ServerError, *InvalidCsrfToken:
-		server.Error.Printf("%s - %v\nRequest:\n%s\n", formatRequest(r), e, formatRequestVerbose(r))
+		server.Error.Printf("%s - %v\nRequest:\n%s\n", FormatRequest(r), e, formatRequestVerbose(r))
 	default:
-		server.Info.Printf("%s - %v", formatRequest(r), e)
+		server.Info.Printf("%s - %v", FormatRequest(r), e)
 	}
 }
 
@@ -340,7 +342,11 @@ func (server *Server) InitHandler() {
 		mux.Handle(key, HttpHandler(server.WrapEndpoint(endpoint)))
 	}
 
-	server.Handler = Cors(mux)
+	if server.Config.Cors {
+		server.Handler = Cors(mux)
+	} else {
+		server.Handler = mux
+	}
 }
 
 func (server *Server) SendDeprecatedVersionEmail(r *http.Request) error {
