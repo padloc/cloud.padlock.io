@@ -46,6 +46,16 @@ type Subscribe struct {
 	*Server
 }
 
+func wrapCardError(err error) error {
+	// For now, card errors are the only errors we are expecting from stripe. Any other
+	// errors we treat as unexpected errors (i.e. ServerError)
+	if stripeErr, ok := err.(*stripe.Error); ok && stripeErr.Type == stripe.ErrorTypeCard {
+		return &StripeError{stripeErr}
+	} else {
+		return err
+	}
+}
+
 func (h *Subscribe) Handle(w http.ResponseWriter, r *http.Request, a *pc.AuthToken) error {
 	if a == nil {
 		return &pc.InvalidAuthToken{}
@@ -63,7 +73,7 @@ func (h *Subscribe) Handle(w http.ResponseWriter, r *http.Request, a *pc.AuthTok
 	}
 
 	if err := acc.SetPaymentSource(token); err != nil {
-		return err
+		return wrapCardError(err)
 	}
 
 	s := acc.Subscription()
@@ -74,14 +84,14 @@ func (h *Subscribe) Handle(w http.ResponseWriter, r *http.Request, a *pc.AuthTok
 			Plan:        PlanMonthly,
 			TrialEndNow: true,
 		}); err != nil {
-			return err
+			return wrapCardError(err)
 		}
 		acc.Customer.Subs.Values = []*stripe.Sub{s}
 	} else {
 		if s_, err := sub.Update(s.ID, &stripe.SubParams{
 			TrialEndNow: true,
 		}); err != nil {
-			return err
+			return wrapCardError(err)
 		} else {
 			*s = *s_
 		}

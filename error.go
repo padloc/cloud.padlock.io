@@ -1,7 +1,10 @@
 package main
 
-import "fmt"
-import "net/http"
+import (
+	"fmt"
+	"github.com/stripe/stripe-go"
+	"net/http"
+)
 
 type SubscriptionRequired struct {
 }
@@ -39,4 +42,24 @@ func (e *InvalidReceipt) Status() int {
 
 func (e *InvalidReceipt) Message() string {
 	return http.StatusText(e.Status())
+}
+
+type StripeError struct {
+	Err *stripe.Error
+}
+
+func (e *StripeError) Code() string {
+	return string(e.Err.Code)
+}
+
+func (e *StripeError) Error() string {
+	return fmt.Sprintf("%s - %s", e.Code(), e.Err)
+}
+
+func (e *StripeError) Status() int {
+	return e.Err.HTTPStatusCode
+}
+
+func (e *StripeError) Message() string {
+	return e.Err.Msg
 }
