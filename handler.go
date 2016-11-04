@@ -17,7 +17,7 @@ type Dashboard struct {
 
 func (h *Dashboard) Handle(w http.ResponseWriter, r *http.Request, auth *pc.AuthToken) error {
 	acc := auth.Account()
-	subAcc, err := h.AccountFromEmail(acc.Email)
+	subAcc, err := h.AccountFromEmail(acc.Email, true)
 	if err != nil {
 		return err
 	}
@@ -57,7 +57,7 @@ func (h *Subscribe) Handle(w http.ResponseWriter, r *http.Request, a *pc.AuthTok
 		return &pc.BadRequest{"No stripe token provided"}
 	}
 
-	acc, err := h.AccountFromEmail(a.Account().Email)
+	acc, err := h.AccountFromEmail(a.Account().Email, true)
 	if err != nil {
 		return err
 	}
@@ -103,7 +103,7 @@ type Unsubscribe struct {
 }
 
 func (h *Unsubscribe) Handle(w http.ResponseWriter, r *http.Request, a *pc.AuthToken) error {
-	acc, err := h.AccountFromEmail(a.Account().Email)
+	acc, err := h.AccountFromEmail(a.Account().Email, true)
 	if err != nil {
 		return err
 	}
@@ -162,7 +162,7 @@ func (h *StripeHook) Handle(w http.ResponseWriter, r *http.Request, a *pc.AuthTo
 	}
 
 	if c != nil {
-		acc, err := h.AccountFromEmail(c.Email)
+		acc, err := h.AccountFromEmail(c.Email, true)
 		if err != nil {
 			return err
 		}

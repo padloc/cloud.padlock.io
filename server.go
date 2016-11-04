@@ -16,17 +16,19 @@ type Server struct {
 	StripeConfig *StripeConfig
 }
 
-func (server *Server) AccountFromEmail(email string) (*Account, error) {
+func (server *Server) AccountFromEmail(email string, create bool) (*Account, error) {
 	acc := &Account{Email: email}
 	if err := server.Storage.Get(acc); err != nil {
 		if err != pc.ErrNotFound {
 			return nil, err
 		}
-		if acc, err = NewAccount(email); err != nil {
-			return nil, err
-		}
-		if err = server.Storage.Put(acc); err != nil {
-			return nil, err
+		if create {
+			if acc, err = NewAccount(email); err != nil {
+				return nil, err
+			}
+			if err = server.Storage.Put(acc); err != nil {
+				return nil, err
+			}
 		}
 	}
 	return acc, nil

@@ -16,6 +16,9 @@ type Account struct {
 }
 
 func (acc *Account) Subscription() *stripe.Sub {
+	if acc.Customer == nil {
+		return nil
+	}
 	subs := acc.Customer.Subs.Values
 
 	if len(subs) == 0 {

@@ -13,15 +13,22 @@ type CheckSubscription struct {
 
 func (m *CheckSubscription) Wrap(h pc.Handler) pc.Handler {
 	return pc.HandlerFunc(func(w http.ResponseWriter, r *http.Request, a *pc.AuthToken) error {
-		w.Header().Set("X-Sub-Required", "true")
+		if m.RequireSub {
+			w.Header().Set("X-Sub-Required", "true")
+		}
 
 		var email string
+		var createAccount bool
 		if a != nil {
 			email = a.Email
+			// Email is verified, so we can safely create an account
+			createAccount = true
 		}
 
 		if email == "" {
 			email = r.PostFormValue("email")
+			// Email is not necessarily verified, so we can not safely create an account
+			createAccount = false
 		}
 
 		if email == "" {
@@ -29,7 +36,7 @@ func (m *CheckSubscription) Wrap(h pc.Handler) pc.Handler {
 		}
 
 		// Get plan account for this email
-		acc, err := m.AccountFromEmail(email)
+		acc, err := m.AccountFromEmail(email, createAccount)
 		if err != nil {
 			return err
 		}
