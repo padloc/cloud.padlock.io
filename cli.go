@@ -1,11 +1,15 @@
 package main
 
-import "io/ioutil"
+import (
+	"errors"
+	"fmt"
+	"io/ioutil"
 
-import "gopkg.in/yaml.v2"
-import "gopkg.in/urfave/cli.v1"
+	"gopkg.in/urfave/cli.v1"
+	"gopkg.in/yaml.v2"
 
-import pc "github.com/maklesoft/padlock-cloud/padlockcloud"
+	pc "github.com/maklesoft/padlock-cloud/padlockcloud"
+)
 
 type CliConfig struct {
 	Stripe StripeConfig `yaml:"stripe"`
@@ -97,35 +101,35 @@ func (cliApp *CliApp) RunServer(context *cli.Context) error {
 //
 // 	return nil
 // }
-//
-// func (cliApp *CliApp) DisplayAccount(context *cli.Context) error {
-// 	email := context.Args().Get(0)
-// 	if email == "" {
-// 		return errors.New("Please provide an email address!")
-// 	}
-//
-// 	if err := cliApp.Storage.Open(); err != nil {
-// 		return err
-// 	}
-// 	defer cliApp.Storage.Close()
-//
-// 	acc := &Account{
-// 		Email: email,
-// 	}
-//
-// 	if err := cliApp.Storage.Get(acc); err != nil {
-// 		return err
-// 	}
-//
-// 	yamlData, err := yaml.Marshal(acc)
-// 	if err != nil {
-// 		return err
-// 	}
-//
-// 	fmt.Println(string(yamlData))
-//
-// 	return nil
-// }
+
+func (cliApp *CliApp) DisplayAccount(context *cli.Context) error {
+	email := context.Args().Get(0)
+	if email == "" {
+		return errors.New("Please provide an email address!")
+	}
+
+	if err := cliApp.Storage.Open(); err != nil {
+		return err
+	}
+	defer cliApp.Storage.Close()
+
+	acc := &Account{
+		Email: email,
+	}
+
+	if err := cliApp.Storage.Get(acc); err != nil {
+		return err
+	}
+
+	yamlData, err := yaml.Marshal(acc)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(string(yamlData))
+
+	return nil
+}
 
 func NewCliApp() *CliApp {
 	pcCli := pc.NewCliApp()
@@ -158,41 +162,41 @@ func NewCliApp() *CliApp {
 	runserverCmd := &app.Commands[0]
 	runserverCmd.Action = app.RunServer
 
-	// app.Commands = append(app.Commands, []cli.Command{
-	// 	{
-	// 		Name:  "subscriptions",
-	// 		Usage: "Commands for managing subscriptions",
-	// 		Subcommands: []cli.Command{
-	// 			{
-	// 				Name:   "update",
-	// 				Usage:  "Create subscription for a given account",
-	// 				Action: app.CreatePlan,
-	// 				Flags: []cli.Flag{
-	// 					cli.StringFlag{
-	// 						Name:  "account",
-	// 						Value: "",
-	// 						Usage: "Email address of the account to create the subscription for",
-	// 					},
-	// 					cli.StringFlag{
-	// 						Name:  "type",
-	// 						Value: "free",
-	// 						Usage: "Plan type; Currently only 'free' is supported (default)",
-	// 					},
-	// 					cli.StringFlag{
-	// 						Name:  "expires",
-	// 						Value: "",
-	// 						Usage: "Expiration date; Must be in the form 'YYYY/MM/DD'",
-	// 					},
-	// 				},
-	// 			},
-	// 			{
-	// 				Name:   "displayaccount",
-	// 				Usage:  "Display a given subscription account",
-	// 				Action: app.DisplayAccount,
-	// 			},
-	// 		},
-	// 	},
-	// }...)
+	app.Commands = append(app.Commands, []cli.Command{
+		{
+			Name:  "sub",
+			Usage: "Commands for managing subscriptions",
+			Subcommands: []cli.Command{
+				// {
+				// 	Name:   "update",
+				// 	Usage:  "Create subscription for a given account",
+				// 	Action: app.CreatePlan,
+				// 	Flags: []cli.Flag{
+				// 		cli.StringFlag{
+				// 			Name:  "account",
+				// 			Value: "",
+				// 			Usage: "Email address of the account to create the subscription for",
+				// 		},
+				// 		cli.StringFlag{
+				// 			Name:  "type",
+				// 			Value: "free",
+				// 			Usage: "Plan type; Currently only 'free' is supported (default)",
+				// 		},
+				// 		cli.StringFlag{
+				// 			Name:  "expires",
+				// 			Value: "",
+				// 			Usage: "Expiration date; Must be in the form 'YYYY/MM/DD'",
+				// 		},
+				// 	},
+				// },
+				{
+					Name:   "display",
+					Usage:  "Display a given subscription account",
+					Action: app.DisplayAccount,
+				},
+			},
+		},
+	}...)
 
 	before := app.Before
 	app.Before = func(context *cli.Context) error {
