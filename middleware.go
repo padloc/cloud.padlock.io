@@ -2,6 +2,7 @@ package main
 
 import (
 	pc "github.com/maklesoft/padlock-cloud/padlockcloud"
+	"github.com/stripe/stripe-go/customer"
 	"net/http"
 	"strconv"
 )
@@ -43,9 +44,28 @@ func (m *CheckSubscription) Wrap(h pc.Handler) pc.Handler {
 
 		status := "inactive"
 		var trialEnd int64 = 0
+
 		if s := acc.Subscription(); s != nil {
 			status = string(s.Status)
 			trialEnd = s.TrialEnd
+		}
+
+		// If subscription is not active, check back with stripe to make sure the subscription
+		// status is up to date.
+		// TODO: Think of a more robust way to ensure proper synchronization between Stripe and
+		// Padlock Ploud to avoid having to this this in a request handler.
+		if m.RequireSub && status != "trialing" && status != "active" {
+			var err error
+			if acc.Customer, err = customer.Get(acc.Customer.ID, nil); err != nil {
+				return err
+			}
+			if err := m.Storage.Put(acc); err != nil {
+				return err
+			}
+			if s := acc.Subscription(); s != nil {
+				status = string(s.Status)
+				trialEnd = s.TrialEnd
+			}
 		}
 
 		w.Header().Set("X-Sub-Status", status)
