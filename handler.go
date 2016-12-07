@@ -177,7 +177,12 @@ func (h *StripeHook) Handle(w http.ResponseWriter, r *http.Request, a *pc.AuthTo
 			return err
 		}
 
-		acc.Customer = c
+		// Only update customer if the ids match (even though that theoretically shouldn't happen,
+		// it's possible that there are two stripe customers with the same email. In that case, this guard
+		// against unexpected behaviour by making sure only one of the customers is used)
+		if acc.Customer.ID == c.ID {
+			acc.Customer = c
+		}
 
 		if err := h.Storage.Put(acc); err != nil {
 			return err
