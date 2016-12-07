@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io/ioutil"
 
+	"github.com/stripe/stripe-go"
+	"github.com/stripe/stripe-go/customer"
 	"gopkg.in/urfave/cli.v1"
 	"gopkg.in/yaml.v2"
 
@@ -53,55 +55,6 @@ func (cliApp *CliApp) RunServer(context *cli.Context) error {
 	return cliApp.Server.Start()
 }
 
-// func (cliApp *CliApp) CreatePlan(context *cli.Context) error {
-// 	var (
-// 		email      string
-// 		subType    string
-// 		expiresStr string
-// 	)
-//
-// 	if email = context.String("account"); email == "" {
-// 		return errors.New("Please provide an email address!")
-// 	}
-// 	if expiresStr = context.String("expires"); expiresStr == "" {
-// 		return errors.New("Please provide an expiration date!")
-// 	}
-// 	if subType = context.String("type"); subType == "" {
-// 		return errors.New("Please provide a subscription type!")
-// 	}
-//
-// 	expires, err := time.Parse("2006/01/02", expiresStr)
-// 	if err != nil {
-// 		return errors.New("Failed to parse expiration date!")
-// 	}
-//
-// 	acc := &Account{
-// 		Email: email,
-// 	}
-//
-// 	switch subType {
-// 	case "free":
-// 		acc.Plans.Free = &FreePlan{
-// 			&Plan{
-// 				Expires: expires,
-// 			},
-// 		}
-// 	default:
-// 		return errors.New("Invalid subscription type")
-// 	}
-//
-// 	if err := cliApp.Storage.Open(); err != nil {
-// 		return err
-// 	}
-// 	defer cliApp.Storage.Close()
-//
-// 	if err := cliApp.Storage.Put(acc); err != nil {
-// 		return err
-// 	}
-//
-// 	return nil
-// }
-
 func (cliApp *CliApp) DisplayAccount(context *cli.Context) error {
 	email := context.Args().Get(0)
 	if email == "" {
@@ -127,6 +80,39 @@ func (cliApp *CliApp) DisplayAccount(context *cli.Context) error {
 	}
 
 	fmt.Println(string(yamlData))
+
+	return nil
+}
+
+func (cliApp *CliApp) UpdateAccount(context *cli.Context) error {
+	email := context.Args().Get(0)
+	if email == "" {
+		return errors.New("Please provide an email address!")
+	}
+
+	cid := context.String("cid")
+
+	if err := cliApp.Storage.Open(); err != nil {
+		return err
+	}
+	defer cliApp.Storage.Close()
+
+	acc := &Account{
+		Email: email,
+	}
+
+	if err := cliApp.Storage.Get(acc); err != nil {
+		return err
+	}
+
+	var err error
+	if acc.Customer, err = customer.Get(cid, nil); err != nil {
+		return err
+	}
+
+	if err := cliApp.Storage.Put(acc); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -167,32 +153,22 @@ func NewCliApp() *CliApp {
 			Name:  "sub",
 			Usage: "Commands for managing subscriptions",
 			Subcommands: []cli.Command{
-				// {
-				// 	Name:   "update",
-				// 	Usage:  "Create subscription for a given account",
-				// 	Action: app.CreatePlan,
-				// 	Flags: []cli.Flag{
-				// 		cli.StringFlag{
-				// 			Name:  "account",
-				// 			Value: "",
-				// 			Usage: "Email address of the account to create the subscription for",
-				// 		},
-				// 		cli.StringFlag{
-				// 			Name:  "type",
-				// 			Value: "free",
-				// 			Usage: "Plan type; Currently only 'free' is supported (default)",
-				// 		},
-				// 		cli.StringFlag{
-				// 			Name:  "expires",
-				// 			Value: "",
-				// 			Usage: "Expiration date; Must be in the form 'YYYY/MM/DD'",
-				// 		},
-				// 	},
-				// },
 				{
 					Name:   "display",
 					Usage:  "Display a given subscription account",
 					Action: app.DisplayAccount,
+				},
+				{
+					Name:   "update",
+					Usage:  "Update a given account",
+					Action: app.UpdateAccount,
+					Flags: []cli.Flag{
+						cli.StringFlag{
+							Name:  "cid",
+							Value: "",
+							Usage: "Stripe customer id",
+						},
+					},
 				},
 			},
 		},
@@ -207,6 +183,9 @@ func NewCliApp() *CliApp {
 			app.InitConfig()
 			return app.Config.LoadFromFile(app.ConfigPath)
 		}
+
+		stripe.Key = app.Config.Stripe.SecretKey
+
 		return nil
 	}
 
