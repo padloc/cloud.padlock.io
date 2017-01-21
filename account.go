@@ -55,6 +55,19 @@ func (acc *Account) CreateCustomer() error {
 	return err
 }
 
+func (acc *Account) UpdateCustomer() error {
+	if acc.Customer == nil {
+		return nil
+	}
+
+	if c, err := customer.Get(acc.Customer.ID, nil); err != nil {
+		return err
+	} else {
+		acc.Customer = c
+		return nil
+	}
+}
+
 func (acc *Account) SetPaymentSource(token string) error {
 	params := &stripe.CustomerParams{}
 	params.SetSource(token)
@@ -93,10 +106,6 @@ func NewAccount(email string) (*Account, error) {
 	acc := &Account{
 		Email:   email,
 		Created: time.Now(),
-	}
-
-	if err := acc.CreateCustomer(); err != nil {
-		return nil, err
 	}
 
 	return acc, nil
