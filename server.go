@@ -70,9 +70,6 @@ func (server *Server) InitEndpoints() {
 func (server *Server) Init() error {
 	stripe.Logger = server.Info
 
-	if err := server.Server.Init(); err != nil {
-		return err
-	}
 	server.InitEndpoints()
 
 	if server.Templates == nil {
@@ -93,10 +90,11 @@ func (server *Server) Init() error {
 	return nil
 }
 
-func NewServer(pcServer *pc.Server) *Server {
+func NewServer(pcServer *pc.Server, stripeConfig *StripeConfig) *Server {
 	// Initialize server instance
 	server := &Server{
-		Server: pcServer,
+		Server:       pcServer,
+		StripeConfig: stripeConfig,
 	}
 	return server
 }

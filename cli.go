@@ -38,18 +38,28 @@ type CliApp struct {
 	Config *CliConfig
 }
 
-func (cliApp *CliApp) InitConfig() {
-	cliApp.Config = &CliConfig{}
-	cliApp.Server.StripeConfig = &cliApp.Config.Stripe
+func (cliApp *CliApp) InitWithConfig(config *CliConfig) error {
+	cliApp.Config = config
+	return nil
 }
 
 func (cliApp *CliApp) RunServer(context *cli.Context) error {
+	if err := cliApp.InitServer(); err != nil {
+		return err
+	}
+
+	cliApp.Server = NewServer(cliApp.CliApp.Server, &cliApp.Config.Stripe)
+
+	if err := cliApp.Server.Init(); err != nil {
+		return err
+	}
+
 	cfg, _ := yaml.Marshal(cliApp.CliApp.Config)
 	cfg2, _ := yaml.Marshal(cliApp.Config)
 	cliApp.Server.Info.Printf("Running server with the following configuration:\n%s%s", cfg, cfg2)
 
-	if err := cliApp.Server.Init(); err != nil {
-		return err
+	if cliApp.CliApp.Server.Config.Test {
+		fmt.Println("*** TEST MODE ***")
 	}
 
 	return cliApp.Server.Start()
@@ -118,15 +128,11 @@ func (cliApp *CliApp) UpdateAccount(context *cli.Context) error {
 }
 
 func NewCliApp() *CliApp {
+	config := &CliConfig{}
 	pcCli := pc.NewCliApp()
-	server := NewServer(pcCli.Server)
 	app := &CliApp{
-		pcCli,
-		server,
-		nil,
+		CliApp: pcCli,
 	}
-	app.InitConfig()
-	config := app.Config
 
 	app.Flags = append(app.Flags, []cli.Flag{
 		cli.StringFlag{
@@ -180,11 +186,18 @@ func NewCliApp() *CliApp {
 
 		if app.ConfigPath != "" {
 			// Replace original config object to prevent flags from being applied
-			app.InitConfig()
-			return app.Config.LoadFromFile(app.ConfigPath)
+			config = &CliConfig{}
+			if err := config.LoadFromFile(app.ConfigPath); err != nil {
+				return err
+			}
 		}
 
-		stripe.Key = app.Config.Stripe.SecretKey
+		stripe.Key = config.Stripe.SecretKey
+
+		if err := app.InitWithConfig(config); err != nil {
+			fmt.Println(err)
+			return err
+		}
 
 		return nil
 	}
