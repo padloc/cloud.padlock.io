@@ -1,16 +1,19 @@
 package padlockcloud
 
-import "net/http"
-import "net/http/httputil"
-import "fmt"
-import "encoding/base64"
-import "regexp"
-import "bytes"
-import "strings"
-import "time"
-import "strconv"
-import "path/filepath"
-import "gopkg.in/tylerb/graceful.v1"
+import (
+	"bytes"
+	"encoding/base64"
+	"fmt"
+	"github.com/rs/cors"
+	"gopkg.in/tylerb/graceful.v1"
+	"net/http"
+	"net/http/httputil"
+	"path/filepath"
+	"regexp"
+	"strconv"
+	"strings"
+	"time"
+)
 
 const (
 	ApiVersion = 1
@@ -90,6 +93,8 @@ type ServerConfig struct {
 	Secret string `yaml:"secret"`
 	// Enable Cross-Origin Resource Sharing
 	Cors bool `yaml:"cors"`
+	// Test mode
+	Test bool `yaml:"test"`
 }
 
 // The Server type holds all the contextual data and logic used for running a Padlock Cloud instances
@@ -97,15 +102,15 @@ type ServerConfig struct {
 type Server struct {
 	*graceful.Server
 	*Log
-	Storage            Storage
-	Sender             Sender
-	Templates          *Templates
-	Config             *ServerConfig
-	Secure             bool
-	Endpoints          map[string]*Endpoint
-	secret             []byte
-	emailRateLimiter   *EmailRateLimiter
-	authRequestCleaner *StorageCleaner
+	Storage           Storage
+	Sender            Sender
+	Templates         *Templates
+	Config            *ServerConfig
+	Secure            bool
+	Endpoints         map[string]*Endpoint
+	secret            []byte
+	emailRateLimiter  *EmailRateLimiter
+	cleanAuthRequests *Job
 }
 
 func (server *Server) BaseUrl(r *http.Request) string {
@@ -160,6 +165,7 @@ func (server *Server) Authenticate(r *http.Request) (*AuthToken, error) {
 	authToken.LastUsed = time.Now()
 	// Update client version
 	authToken.ClientVersion = r.Header.Get("X-Client-Version")
+	authToken.ClientPlatform = r.Header.Get("X-Client-Platform")
 
 	acc.UpdateAuthToken(authToken)
 
@@ -278,6 +284,7 @@ func (server *Server) InitEndpoints() {
 			"GET":    &ReadStore{server},
 			"HEAD":   &ReadStore{server},
 			"PUT":    &WriteStore{server},
+			"POST":   &WriteStore{server},
 			"DELETE": &RequestDeleteStore{server},
 		},
 		Version:  ApiVersion,
@@ -343,7 +350,16 @@ func (server *Server) InitHandler() {
 	}
 
 	if server.Config.Cors {
-		server.Handler = Cors(mux)
+		exposedHeaders := []string{"X-Sub-Required", "X-Sub-Status", "X-Sub-Trial-End"}
+		if server.Config.Test {
+			exposedHeaders = append(exposedHeaders, "X-Test-Act-Url")
+		}
+		server.Handler = cors.New(cors.Options{
+			AllowedOrigins: []string{"*"},
+			AllowedMethods: []string{"HEAD", "GET", "POST", "PUT", "DELETE"},
+			AllowedHeaders: []string{"Authorization", "Accept", "Content-Type", "X-Client-Version"},
+			ExposedHeaders: exposedHeaders,
+		}).Handler(mux)
 	} else {
 		server.Handler = mux
 	}
@@ -388,6 +404,10 @@ func (server *Server) SendDeprecatedVersionEmail(r *http.Request) error {
 func (server *Server) Init() error {
 	var err error
 
+	if err := server.Log.Init(); err != nil {
+		return err
+	}
+
 	if server.Config.Secret != "" {
 		if s, err := base64.StdEncoding.DecodeString(server.Config.Secret); err != nil {
 			server.secret = s
@@ -426,23 +446,43 @@ func (server *Server) Init() error {
 		server.emailRateLimiter = rl
 	}
 
-	// Clean out auth request older than 24hrs once a day
-	if cl, err := NewStorageCleaner(server.Storage, &AuthRequest{}, func(t Storable) bool {
-		return t.(*AuthRequest).Created.Before(time.Now().Add(-24 * time.Hour))
-	}); err != nil {
-		return err
-	} else {
-		server.authRequestCleaner = cl
-		cl.Log = server.Log
-		cl.Start(24 * time.Hour)
+	server.cleanAuthRequests = &Job{
+		Action: func() {
+			ar := &AuthRequest{}
+			iter, err := server.Storage.Iterator(ar)
+			if err != nil {
+				server.Log.Error.Println("Error while cleaning auth requests:", err)
+				return
+			}
+			defer iter.Release()
+
+			n := 0
+			for iter.Next() {
+				if err := iter.Get(ar); err != nil {
+					server.Log.Error.Println("Error while cleaning auth requests:", err)
+				}
+				if ar.Created.Before(time.Now().Add(-24 * time.Hour)) {
+					if err := server.Storage.Delete(ar); err != nil {
+						server.Log.Error.Println("Error while cleaning auth requests:", err)
+					}
+					n = n + 1
+				}
+			}
+
+			if n > 0 {
+				server.Log.Info.Printf("Deleted %d auth requests older than 24 hrs", n)
+			}
+		},
 	}
+
+	server.cleanAuthRequests.Start(24 * time.Hour)
 
 	return nil
 }
 
 func (server *Server) CleanUp() error {
-	if server.authRequestCleaner != nil {
-		server.authRequestCleaner.Stop()
+	if server.cleanAuthRequests != nil {
+		server.cleanAuthRequests.Stop()
 	}
 	return server.Storage.Close()
 }
