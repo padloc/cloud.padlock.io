@@ -45,7 +45,7 @@ func (server *Server) InitEndpoints() {
 	store.Handlers["PUT"] = (&CheckSubscription{server, true}).Wrap(store.Handlers["PUT"])
 	store.Handlers["POST"] = (&CheckSubscription{server, true}).Wrap(store.Handlers["POST"])
 
-	server.Endpoints["/dashboard/"].Handlers["GET"] = &Dashboard{server}
+	server.Server.Endpoints["/dashboard/"].Handlers["GET"] = &Dashboard{server}
 
 	server.Server.Endpoints["/subscribe/"] = &pc.Endpoint{
 		Handlers: map[string]pc.Handler{

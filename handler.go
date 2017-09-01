@@ -22,19 +22,14 @@ func (h *Dashboard) Handle(w http.ResponseWriter, r *http.Request, auth *pc.Auth
 		return err
 	}
 
+	params := pc.DashboardParams(r, auth)
+	params["subAccount"] = subAcc
+	params["stripePublicKey"] = h.StripeConfig.PublicKey
+	params["subscribed"] = r.URL.Query().Get("subscribed")
+	params["unsubscribed"] = r.URL.Query().Get("unsubscribed")
+
 	var b bytes.Buffer
-	if err := h.Templates.Dashboard.Execute(&b, map[string]interface{}{
-		"account":          acc,
-		"subAccount":       subAcc,
-		"stripePublicKey":  h.StripeConfig.PublicKey,
-		"paired":           r.URL.Query().Get("paired"),
-		"revoked":          r.URL.Query().Get("revoked"),
-		"subscribed":       r.URL.Query().Get("subscribed"),
-		"unsubscribed":     r.URL.Query().Get("unsubscribed"),
-		"datareset":        r.URL.Query().Get("datareset"),
-		"action":           r.URL.Query().Get("action"),
-		pc.CSRFTemplateTag: pc.CSRFTemplateField(r),
-	}); err != nil {
+	if err := h.Templates.Dashboard.Execute(&b, params); err != nil {
 		return err
 	}
 
