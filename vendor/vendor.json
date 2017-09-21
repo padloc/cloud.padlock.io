@@ -45,16 +45,22 @@
 			"revisionTime": "2017-04-16T16:04:56Z"
 		},
 		{
+			"checksumSHA1": "WUELlL24+XZSYM1q6Oqnt1SiMKo=",
+			"path": "github.com/maklesoft/cloud.padlock.io",
+			"revision": "56735b3fbfb0cff15c3212575c708b2d3e9cde07",
+			"revisionTime": "2017-09-01T07:59:49Z"
+		},
+		{
 			"checksumSHA1": "Y8nS6qCmuqkzcKOk1N7VeptDbJY=",
 			"path": "github.com/maklesoft/padlock-cloud",
 			"revision": "e32fc701456b203dca2a5587242e27f292b10f7f",
 			"revisionTime": "2017-04-16T16:04:56Z"
 		},
 		{
-			"checksumSHA1": "CsgO/ENnzwik8Qx2wzI0Q/2e3F0=",
+			"checksumSHA1": "akBSO309//31uailaizZfvWHbWs=",
 			"path": "github.com/maklesoft/padlock-cloud/padlockcloud",
-			"revision": "a846d11e3ab7fc2ccba5b99bb7af96312892eca5",
-			"revisionTime": "2017-09-01T08:14:59Z"
+			"revision": "002b8227210fd89463d73bd51dda90c45ca427df",
+			"revisionTime": "2017-09-21T14:57:17Z"
 		},
 		{
 			"checksumSHA1": "Hky3u+8Rqum+wB5BHMj0A8ZmT4g=",
