@@ -21,8 +21,7 @@
 {{ template "dashboard-manage-account" . }}
 
 <section>
-    {{ if .hideSub }}
-    {{ else if .subAccount.HasActiveSubscription }}
+    {{ if .subAccount.HasActiveSubscription }}
         <p>
             You are currently subscribed to the <strong>monthly plan</strong>, giving you full access
             to Padlock Cloud and all of its features!

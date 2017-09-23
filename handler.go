@@ -27,7 +27,6 @@ func (h *Dashboard) Handle(w http.ResponseWriter, r *http.Request, auth *pc.Auth
 	params["stripePublicKey"] = h.StripeConfig.PublicKey
 	params["subscribed"] = r.URL.Query().Get("subscribed")
 	params["unsubscribed"] = r.URL.Query().Get("unsubscribed")
-	params["hideSub"] = NoSubRequired(auth)
 
 	var b bytes.Buffer
 	if err := h.Templates.Dashboard.Execute(&b, params); err != nil {

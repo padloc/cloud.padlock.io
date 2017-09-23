@@ -54,10 +54,6 @@ func (m *CheckSubscription) Wrap(h pc.Handler) pc.Handler {
 			trialEnd = s.TrialEnd
 		}
 
-		if NoSubRequired(a) {
-			status = "active"
-		}
-
 		// If subscription is not active, check back with stripe to make sure the subscription
 		// status is up to date.
 		// TODO: Think of a more robust way to ensure proper synchronization between Stripe and
