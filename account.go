@@ -8,6 +8,7 @@ import (
 )
 
 const PlanMonthly = "padlock-cloud-monthly"
+const PlanYearly = "padlock-cloud-yearly"
 
 type Account struct {
 	Email    string
@@ -46,7 +47,7 @@ func (acc *Account) Serialize() ([]byte, error) {
 func (acc *Account) CreateCustomer() error {
 	params := &stripe.CustomerParams{
 		Email: acc.Email,
-		Plan:  PlanMonthly,
+		Plan:  PlanYearly,
 	}
 
 	var err error

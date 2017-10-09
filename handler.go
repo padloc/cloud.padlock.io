@@ -76,7 +76,7 @@ func (h *Subscribe) Handle(w http.ResponseWriter, r *http.Request, a *pc.AuthTok
 		var err error
 		if s, err = sub.New(&stripe.SubParams{
 			Customer:    acc.Customer.ID,
-			Plan:        PlanMonthly,
+			Plan:        PlanYearly,
 			TrialEndNow: true,
 		}); err != nil {
 			return wrapCardError(err)

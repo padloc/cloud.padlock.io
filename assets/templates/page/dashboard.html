@@ -23,7 +23,7 @@
 <section>
     {{ if .subAccount.HasActiveSubscription }}
         <p>
-            You are currently subscribed to the <strong>monthly plan</strong>, giving you full access
+            You currently have an active subscription, giving you full access
             to Padlock Cloud and all of its features!
         </p>
         {{ if eq .action "unsubscribe" }}
@@ -50,25 +50,26 @@
         {{ else }}
         <p class="note">
             <strong>Important: </strong>
-            You currently don't have an active subscription! This means you can access
-            your existing data on Padlock Cloud but you won't be able to upload any new data
-            or synchronize changes between devices. Get a subscription now to regain full access
-            to Padlock Cloud!
+            You currently don't have an active subscription which means you
+            can access your existing data on Padlock Cloud but you won't be
+            able to upload any new data or synchronize changes between devices.
+            Get a subscription now to take full advantage of Padlock Cloud!
         </p>
         {{ end }}
         <form action="/subscribe/" method="POST">
             <script
                 src="https://checkout.stripe.com/checkout.js" class="stripe-button"
                 data-key="{{ .stripePublicKey }}"
-                data-amount="399"
-                data-name="Padlock Cloud"
-                data-description="Monthly Subscription"
+                data-amount="1200"
+                data-currency="usd"
+                data-name="Padlock Cloud Subscription"
+                data-description="Only $1 / Month (Billed Annually)"
                 data-image="/static/img/padlock-cloud.svg"
                 data-locale="auto"
                 data-email="{{ .account.Email }}"
                 data-allow-remember-me="false"
-                data-label="Get Monthly Subscription"
-                data-panel-label="Get For {{`{{`}}amount{{`}}`}}/Month">
+                data-label="Get For $1 / Month (Billed Annually)"
+                data-panel-label="Pay {{`{{`}}amount{{`}}`}}">
             </script>
         </form>
     {{ end }}
