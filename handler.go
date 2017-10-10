@@ -84,6 +84,7 @@ func (h *Subscribe) Handle(w http.ResponseWriter, r *http.Request, a *pc.AuthTok
 		acc.Customer.Subs.Values = []*stripe.Sub{s}
 	} else {
 		if s_, err := sub.Update(s.ID, &stripe.SubParams{
+			Plan:        PlanYearly,
 			TrialEndNow: true,
 		}); err != nil {
 			return wrapCardError(err)
