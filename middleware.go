@@ -8,7 +8,7 @@ import (
 )
 
 func NoSubRequired(a *pc.AuthToken) bool {
-	return a != nil && a.Device != nil && a.Device.Platform == "iOS" && a.Device.AppVersion == "2.1.1"
+	return a != nil && a.Device != nil && a.Device.Platform == "iOS" && a.Device.AppVersion == "2.2.0"
 }
 
 type CheckSubscription struct {
@@ -52,6 +52,10 @@ func (m *CheckSubscription) Wrap(h pc.Handler) pc.Handler {
 		if s := acc.Subscription(); s != nil {
 			status = string(s.Status)
 			trialEnd = s.TrialEnd
+		}
+
+		if NoSubRequired(a) {
+			status = "active"
 		}
 
 		// If subscription is not active, check back with stripe to make sure the subscription
