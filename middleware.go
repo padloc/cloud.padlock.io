@@ -8,7 +8,8 @@ import (
 )
 
 func NoSubRequired(a *pc.AuthToken) bool {
-	return a != nil && a.Device != nil && a.Device.Platform == "iOS" && a.Device.AppVersion == "2.2.0"
+	// return a != nil && a.Device != nil && a.Device.Platform == "iOS" && a.Device.AppVersion == "2.2.0"
+	return false
 }
 
 type CheckSubscription struct {
