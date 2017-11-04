@@ -3,7 +3,9 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"github.com/dukex/mixpanel"
 	pc "github.com/maklesoft/padlock-cloud/padlockcloud"
+	"github.com/satori/go.uuid"
 	"github.com/stripe/stripe-go"
 	"github.com/stripe/stripe-go/customer"
 	"github.com/stripe/stripe-go/sub"
@@ -187,6 +189,59 @@ func (h *StripeHook) Handle(w http.ResponseWriter, r *http.Request, a *pc.AuthTo
 
 		h.Info.Printf("%s - stripe_hook - %s:%s", pc.FormatRequest(r), acc.Email, event.Type)
 	}
+
+	return nil
+}
+
+type TrackingEvent struct {
+	TrackingID string                 `json:"trackingID"`
+	Name       string                 `json:"event"`
+	Properties map[string]interface{} `json:"props"`
+}
+
+type Track struct {
+	*Server
+}
+
+func (h *Track) Handle(w http.ResponseWriter, r *http.Request, a *pc.AuthToken) error {
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		return err
+	}
+	event := &TrackingEvent{}
+	if err := json.Unmarshal(body, event); err != nil {
+		return err
+	}
+
+	if event.TrackingID == "" {
+		event.TrackingID = uuid.NewV4().String()
+	}
+
+	var acc *Account
+	if a != nil {
+		acc, _ = h.AccountFromEmail(a.Email, false)
+	}
+
+	if acc != nil {
+		if acc.TrackingID == "" {
+			acc.TrackingID = event.TrackingID
+			h.Storage.Put(acc)
+		} else {
+			event.TrackingID = acc.TrackingID
+		}
+	}
+
+	h.mixpanel.Track(event.TrackingID, event.Name, &mixpanel.Event{
+		Properties: event.Properties,
+	})
+
+	var response []byte
+	if response, err = json.Marshal(event); err != nil {
+		return err
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(response)
 
 	return nil
 }

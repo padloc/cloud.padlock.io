@@ -11,9 +11,10 @@ const PlanMonthly = "padlock-cloud-monthly"
 const PlanYearly = "padlock-cloud-yearly"
 
 type Account struct {
-	Email    string
-	Created  time.Time
-	Customer *stripe.Customer
+	Email      string
+	Created    time.Time
+	Customer   *stripe.Customer
+	TrackingID string
 }
 
 func (acc *Account) Subscription() *stripe.Sub {

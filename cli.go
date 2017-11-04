@@ -14,7 +14,8 @@ import (
 )
 
 type CliConfig struct {
-	Stripe StripeConfig `yaml:"stripe"`
+	Stripe   StripeConfig   `yaml:"stripe"`
+	Mixpanel MixpanelConfig `yaml:"mixpanel"`
 }
 
 func (c *CliConfig) LoadFromFile(path string) error {
@@ -48,7 +49,7 @@ func (cliApp *CliApp) RunServer(context *cli.Context) error {
 		return err
 	}
 
-	cliApp.Server = NewServer(cliApp.CliApp.Server, &cliApp.Config.Stripe)
+	cliApp.Server = NewServer(cliApp.CliApp.Server, &cliApp.Config.Stripe, &cliApp.Config.Mixpanel)
 
 	if err := cliApp.Server.Init(); err != nil {
 		return err
@@ -148,6 +149,13 @@ func NewCliApp() *CliApp {
 			Usage:       "Stripe public key",
 			EnvVar:      "PC_STRIPE_PUBLIC_KEY",
 			Destination: &config.Stripe.PublicKey,
+		},
+		cli.StringFlag{
+			Name:        "mixpanel-token",
+			Value:       "",
+			Usage:       "Mixpanel token",
+			EnvVar:      "PC_MIXPANEL_TOKEN",
+			Destination: &config.Mixpanel.Token,
 		},
 	}...)
 
