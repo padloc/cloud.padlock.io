@@ -231,8 +231,20 @@ func (h *Track) Handle(w http.ResponseWriter, r *http.Request, a *pc.AuthToken) 
 		}
 	}
 
+	props := event.Properties
+
+	device := pc.DeviceFromRequest(r)
+
+	props["Platform"] = device.Platform
+	props["Device UUID"] = device.UUID
+	props["Device Manufacturer"] = device.Manufacturer
+	props["Device Model"] = device.Model
+	props["OS Version"] = device.OSVersion
+	props["Device Name"] = device.HostName
+	props["App Version"] = device.AppVersion
+
 	h.mixpanel.Track(event.TrackingID, event.Name, &mixpanel.Event{
-		Properties: event.Properties,
+		Properties: props,
 	})
 
 	var response []byte
