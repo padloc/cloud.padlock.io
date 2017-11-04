@@ -11,6 +11,7 @@ import (
 	"github.com/stripe/stripe-go/sub"
 	"io/ioutil"
 	"net/http"
+	"time"
 )
 
 type Dashboard struct {
@@ -243,9 +244,54 @@ func (h *Track) Handle(w http.ResponseWriter, r *http.Request, a *pc.AuthToken) 
 	props["Device Name"] = device.HostName
 	props["App Version"] = device.AppVersion
 
-	h.mixpanel.Track(event.TrackingID, event.Name, &mixpanel.Event{
+	if err := h.mixpanel.Track(event.TrackingID, event.Name, &mixpanel.Event{
 		Properties: props,
-	})
+	}); err != nil {
+		return err
+	}
+
+	updateProps := map[string]interface{}{
+		"$created":         props["First Launch"],
+		"First App Launch": props["First Launch"],
+		"First Platform":   props["Platform"],
+	}
+
+	if acc != nil {
+		updateProps["$email"] = acc.Email
+		updateProps["First Connected"] = acc.Created.UTC().Format(time.RFC3339)
+	}
+
+	if err := h.mixpanel.Update(event.TrackingID, &mixpanel.Update{
+		Operation:  "$set_once",
+		Properties: updateProps,
+	}); err != nil {
+		return err
+	}
+
+	if a != nil {
+		nDevices := 0
+		platforms := make([]string, 0)
+		pMap := make(map[string]bool)
+		for _, token := range a.Account().AuthTokens {
+			if token.Type == "api" && !token.Expired() {
+				nDevices = nDevices + 1
+			}
+			if token.Device != nil && token.Device.Platform != "" && !pMap[token.Device.Platform] {
+				platforms = append(platforms, token.Device.Platform)
+				pMap[token.Device.Platform] = true
+			}
+		}
+
+		if err := h.mixpanel.Update(event.TrackingID, &mixpanel.Update{
+			Operation: "$set",
+			Properties: map[string]interface{}{
+				"Paired Devices": nDevices,
+				"Platforms":      platforms,
+			},
+		}); err != nil {
+			return err
+		}
+	}
 
 	var response []byte
 	if response, err = json.Marshal(event); err != nil {
