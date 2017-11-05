@@ -153,6 +153,13 @@ func (h *Unsubscribe) Handle(w http.ResponseWriter, r *http.Request, a *pc.AuthT
 
 	h.Info.Printf("%s - unsubscribe - %s\n", pc.FormatRequest(r), acc.Email)
 
+	h.Track(&TrackingEvent{
+		Name: "Cancel Subscription",
+		Properties: map[string]interface{}{
+			"Plan": PlanYearly,
+		},
+	}, r, a)
+
 	return nil
 }
 
