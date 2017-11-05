@@ -112,6 +112,14 @@ func (h *Subscribe) Handle(w http.ResponseWriter, r *http.Request, a *pc.AuthTok
 
 	h.Info.Printf("%s - subcribe - %s\n", pc.FormatRequest(r), acc.Email)
 
+	h.Track(&TrackingEvent{
+		Name: "Buy Subscription",
+		Properties: map[string]interface{}{
+			"Plan":   PlanYearly,
+			"Source": sourceFromRef(r.URL.Query().Get("ref")),
+		},
+	}, r, a)
+
 	return nil
 }
 

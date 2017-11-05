@@ -57,7 +57,7 @@
             Get a subscription now to take full advantage of Padlock Cloud!
         </p>
         {{ end }}
-        <form action="/subscribe/" method="POST">
+        <form action="/subscribe/?ref={{ .ref }}" method="POST">
             <script
                 src="https://checkout.stripe.com/checkout.js" class="stripe-button"
                 data-key="{{ .stripePublicKey }}"
