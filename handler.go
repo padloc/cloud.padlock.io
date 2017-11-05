@@ -3,15 +3,12 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/dukex/mixpanel"
 	pc "github.com/maklesoft/padlock-cloud/padlockcloud"
-	"github.com/satori/go.uuid"
 	"github.com/stripe/stripe-go"
 	"github.com/stripe/stripe-go/customer"
 	"github.com/stripe/stripe-go/sub"
 	"io/ioutil"
 	"net/http"
-	"time"
 )
 
 type Dashboard struct {
@@ -194,12 +191,6 @@ func (h *StripeHook) Handle(w http.ResponseWriter, r *http.Request, a *pc.AuthTo
 	return nil
 }
 
-type TrackingEvent struct {
-	TrackingID string                 `json:"trackingID"`
-	Name       string                 `json:"event"`
-	Properties map[string]interface{} `json:"props"`
-}
-
 type Track struct {
 	*Server
 }
@@ -214,107 +205,7 @@ func (h *Track) Handle(w http.ResponseWriter, r *http.Request, a *pc.AuthToken) 
 		return err
 	}
 
-	if event.TrackingID == "" {
-		event.TrackingID = uuid.NewV4().String()
-	}
-
-	var acc *Account
-	if a != nil {
-		acc, _ = h.AccountFromEmail(a.Email, false)
-	}
-
-	if acc != nil {
-		if acc.TrackingID == "" {
-			acc.TrackingID = event.TrackingID
-			h.Storage.Put(acc)
-		} else {
-			event.TrackingID = acc.TrackingID
-		}
-	}
-
-	props := event.Properties
-
-	device := pc.DeviceFromRequest(r)
-
-	props["Platform"] = device.Platform
-	props["Device UUID"] = device.UUID
-	props["Device Manufacturer"] = device.Manufacturer
-	props["Device Model"] = device.Model
-	props["OS Version"] = device.OSVersion
-	props["Device Name"] = device.HostName
-	props["App Version"] = device.AppVersion
-	props["Authenticated"] = a != nil
-
-	if acc != nil {
-		subStatus := "inactive"
-		if s := acc.Subscription(); s != nil {
-			subStatus = string(s.Status)
-			props["Plan"] = s.Plan.Name
-		}
-		props["Subscription Status"] = subStatus
-	}
-
-	if err := h.mixpanel.Track(event.TrackingID, event.Name, &mixpanel.Event{
-		IP:         pc.IPFromRequest(r),
-		Properties: props,
-	}); err != nil {
-		return err
-	}
-
-	updateProps := map[string]interface{}{
-		"$created":         props["First Launch"],
-		"First App Launch": props["First Launch"],
-		"First Platform":   props["Platform"],
-	}
-
-	if acc != nil {
-		updateProps["$email"] = acc.Email
-		updateProps["Created Padlock Cloud Account"] = acc.Created.UTC().Format(time.RFC3339)
-	}
-
-	if err := h.mixpanel.Update(event.TrackingID, &mixpanel.Update{
-		IP:         pc.IPFromRequest(r),
-		Operation:  "$set_once",
-		Properties: updateProps,
-	}); err != nil {
-		return err
-	}
-
-	if a != nil {
-		nDevices := 0
-		platforms := make([]string, 0)
-		pMap := make(map[string]bool)
-		for _, token := range a.Account().AuthTokens {
-			if token.Type == "api" && !token.Expired() {
-				nDevices = nDevices + 1
-			}
-			if token.Device != nil && token.Device.Platform != "" && !pMap[token.Device.Platform] {
-				platforms = append(platforms, token.Device.Platform)
-				pMap[token.Device.Platform] = true
-			}
-		}
-
-		updateProps = map[string]interface{}{
-			"Paired Devices":      nDevices,
-			"Platforms":           platforms,
-			"Last Sync":           props["Last Sync"],
-			"Subscription Status": props["Subscription Status"],
-			"Plan":                props["Plan"],
-		}
-	} else {
-		updateProps = make(map[string]interface{})
-	}
-
-	updateProps["Last Rated"] = props["Last Rated"]
-	updateProps["Rated Version"] = props["Rated Version"]
-	updateProps["Rating"] = props["Rating"]
-	updateProps["Last Reviewed"] = props["Last Reviewed"]
-
-	if err := h.mixpanel.Update(event.TrackingID, &mixpanel.Update{
-		IP:         pc.IPFromRequest(r),
-		Operation:  "$set",
-		Properties: updateProps,
-	}); err != nil {
+	if err := h.Track(event, r, a); err != nil {
 		return err
 	}
 

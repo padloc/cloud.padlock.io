@@ -1,7 +1,6 @@
 package main
 
 import (
-	"github.com/dukex/mixpanel"
 	pc "github.com/maklesoft/padlock-cloud/padlockcloud"
 	"github.com/stripe/stripe-go"
 	"path/filepath"
@@ -18,28 +17,14 @@ type MixpanelConfig struct {
 
 type Server struct {
 	*pc.Server
+	Tracker
 	Templates      *Templates
 	StripeConfig   *StripeConfig
 	MixpanelConfig *MixpanelConfig
-	mixpanel       mixpanel.Mixpanel
 }
 
 func (server *Server) AccountFromEmail(email string, create bool) (*Account, error) {
-	acc := &Account{Email: email}
-	if err := server.Storage.Get(acc); err != nil {
-		if err != pc.ErrNotFound {
-			return nil, err
-		}
-		if create {
-			if acc, err = NewAccount(email); err != nil {
-				return nil, err
-			}
-			if err = server.Storage.Put(acc); err != nil {
-				return nil, err
-			}
-		}
-	}
-	return acc, nil
+	return AccountFromEmail(email, create, server.Storage)
 }
 
 func (server *Server) InitEndpoints() {
@@ -102,9 +87,8 @@ func (server *Server) Init() error {
 
 	stripe.Key = server.StripeConfig.SecretKey
 
-	server.Log.Info.Printf("Setting up mixpanel with token %s", server.MixpanelConfig.Token)
 	// Set up tracking
-	server.mixpanel = mixpanel.New(server.MixpanelConfig.Token, "")
+	server.Tracker = NewMixpanelTracker(server.MixpanelConfig.Token, server.Storage)
 
 	return nil
 }

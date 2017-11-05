@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	pc "github.com/maklesoft/padlock-cloud/padlockcloud"
 	"github.com/stripe/stripe-go"
 	"github.com/stripe/stripe-go/customer"
 	"time"
@@ -101,5 +102,23 @@ func NewAccount(email string) (*Account, error) {
 		return nil, err
 	}
 
+	return acc, nil
+}
+
+func AccountFromEmail(email string, create bool, storage pc.Storage) (*Account, error) {
+	acc := &Account{Email: email}
+	if err := storage.Get(acc); err != nil {
+		if err != pc.ErrNotFound {
+			return nil, err
+		}
+		if create {
+			if acc, err = NewAccount(email); err != nil {
+				return nil, err
+			}
+			if err = storage.Put(acc); err != nil {
+				return nil, err
+			}
+		}
+	}
 	return acc, nil
 }
