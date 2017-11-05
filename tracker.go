@@ -8,6 +8,19 @@ import (
 	"time"
 )
 
+func sourceFromRef(ref string) string {
+	switch ref {
+	case "app-1":
+		return "App - Cloud View"
+	case "app-2":
+		return "App - Trial Ending Reminder"
+	case "app-3":
+		return "App - Read Only Notice"
+	default:
+		return ""
+	}
+}
+
 type TrackingEvent struct {
 	TrackingID string                 `json:"trackingID"`
 	Name       string                 `json:"event"`
@@ -37,6 +50,10 @@ func (t *mixpanelTracker) Track(event *TrackingEvent, r *http.Request, a *pc.Aut
 		event.TrackingID = uuid.NewV4().String()
 	}
 
+	if event.Properties == nil {
+		event.Properties = make(map[string]interface{})
+	}
+
 	var acc *Account
 	if a != nil {
 		acc, _ = AccountFromEmail(a.Email, false, t.storage)
@@ -53,16 +70,24 @@ func (t *mixpanelTracker) Track(event *TrackingEvent, r *http.Request, a *pc.Aut
 
 	props := event.Properties
 
-	device := pc.DeviceFromRequest(r)
-
-	props["Platform"] = device.Platform
-	props["Device UUID"] = device.UUID
-	props["Device Manufacturer"] = device.Manufacturer
-	props["Device Model"] = device.Model
-	props["OS Version"] = device.OSVersion
-	props["Device Name"] = device.HostName
-	props["App Version"] = device.AppVersion
 	props["Authenticated"] = a != nil
+
+	var device *pc.Device
+	if a != nil {
+		device = a.Device
+	} else {
+		device = pc.DeviceFromRequest(r)
+	}
+
+	if device != nil {
+		props["Platform"] = device.Platform
+		props["Device UUID"] = device.UUID
+		props["Device Manufacturer"] = device.Manufacturer
+		props["Device Model"] = device.Model
+		props["OS Version"] = device.OSVersion
+		props["Device Name"] = device.HostName
+		props["App Version"] = device.AppVersion
+	}
 
 	if acc != nil {
 		subStatus := "inactive"

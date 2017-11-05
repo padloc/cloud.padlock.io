@@ -28,6 +28,7 @@ func (h *Dashboard) Handle(w http.ResponseWriter, r *http.Request, auth *pc.Auth
 	params["subscribed"] = r.URL.Query().Get("subscribed")
 	params["unsubscribed"] = r.URL.Query().Get("unsubscribed")
 	params["hideSub"] = NoSubRequired(auth)
+	params["ref"] = r.URL.Query().Get("ref")
 
 	var b bytes.Buffer
 	if err := h.Templates.Dashboard.Execute(&b, params); err != nil {
@@ -35,6 +36,15 @@ func (h *Dashboard) Handle(w http.ResponseWriter, r *http.Request, auth *pc.Auth
 	}
 
 	b.WriteTo(w)
+
+	h.Track(&TrackingEvent{
+		Name: "Open Dashboard",
+		Properties: map[string]interface{}{
+			"Action": params["action"],
+			"Source": sourceFromRef(params["ref"].(string)),
+		},
+	}, r, auth)
+
 	return nil
 }
 
