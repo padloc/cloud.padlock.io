@@ -243,8 +243,19 @@ func (h *Track) Handle(w http.ResponseWriter, r *http.Request, a *pc.AuthToken) 
 	props["OS Version"] = device.OSVersion
 	props["Device Name"] = device.HostName
 	props["App Version"] = device.AppVersion
+	props["Authenticated"] = a != nil
+
+	if acc != nil {
+		subStatus := "inactive"
+		if s := acc.Subscription(); s != nil {
+			subStatus = string(s.Status)
+			props["Plan"] = s.Plan.Name
+		}
+		props["Subscription Status"] = subStatus
+	}
 
 	if err := h.mixpanel.Track(event.TrackingID, event.Name, &mixpanel.Event{
+		IP:         pc.IPFromRequest(r),
 		Properties: props,
 	}); err != nil {
 		return err
@@ -258,10 +269,11 @@ func (h *Track) Handle(w http.ResponseWriter, r *http.Request, a *pc.AuthToken) 
 
 	if acc != nil {
 		updateProps["$email"] = acc.Email
-		updateProps["First Connected"] = acc.Created.UTC().Format(time.RFC3339)
+		updateProps["Created Padlock Cloud Account"] = acc.Created.UTC().Format(time.RFC3339)
 	}
 
 	if err := h.mixpanel.Update(event.TrackingID, &mixpanel.Update{
+		IP:         pc.IPFromRequest(r),
 		Operation:  "$set_once",
 		Properties: updateProps,
 	}); err != nil {
@@ -282,15 +294,28 @@ func (h *Track) Handle(w http.ResponseWriter, r *http.Request, a *pc.AuthToken) 
 			}
 		}
 
-		if err := h.mixpanel.Update(event.TrackingID, &mixpanel.Update{
-			Operation: "$set",
-			Properties: map[string]interface{}{
-				"Paired Devices": nDevices,
-				"Platforms":      platforms,
-			},
-		}); err != nil {
-			return err
+		updateProps = map[string]interface{}{
+			"Paired Devices":      nDevices,
+			"Platforms":           platforms,
+			"Last Sync":           props["Last Sync"],
+			"Subscription Status": props["Subscription Status"],
+			"Plan":                props["Plan"],
 		}
+	} else {
+		updateProps = make(map[string]interface{})
+	}
+
+	updateProps["Last Rated"] = props["Last Rated"]
+	updateProps["Rated Version"] = props["Rated Version"]
+	updateProps["Rating"] = props["Rating"]
+	updateProps["Last Reviewed"] = props["Last Reviewed"]
+
+	if err := h.mixpanel.Update(event.TrackingID, &mixpanel.Update{
+		IP:         pc.IPFromRequest(r),
+		Operation:  "$set",
+		Properties: updateProps,
+	}); err != nil {
+		return err
 	}
 
 	var response []byte
