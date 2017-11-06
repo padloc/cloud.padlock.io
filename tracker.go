@@ -11,13 +11,19 @@ import (
 func sourceFromRef(ref string) string {
 	switch ref {
 	case "app-1":
-		return "App - Cloud View"
+		return "Cloud View - Manage Account"
 	case "app-2":
-		return "App - Trial Ending Reminder"
+		return "Cloud View - Trialing"
 	case "app-3":
-		return "App - Read Only Notice"
+		return "Cloud View - Readonly"
+	case "app-4":
+		return "Dialog - Trial Ending"
+	case "app-5":
+		return "Dialog - Readonly"
+	case "pair":
+		return "Device Paired"
 	default:
-		return ""
+		return ref
 	}
 }
 
@@ -46,6 +52,8 @@ func NewMixpanelTracker(token string, storage pc.Storage) Tracker {
 func (t *mixpanelTracker) Track(event *TrackingEvent, r *http.Request, a *pc.AuthToken) error {
 	ip := pc.IPFromRequest(r)
 
+	originalTrackingID := event.TrackingID
+
 	if event.TrackingID == "" {
 		event.TrackingID = uuid.NewV4().String()
 	}
@@ -65,6 +73,18 @@ func (t *mixpanelTracker) Track(event *TrackingEvent, r *http.Request, a *pc.Aut
 			t.storage.Put(acc)
 		} else {
 			event.TrackingID = acc.TrackingID
+
+			if originalTrackingID != "" && originalTrackingID != acc.TrackingID {
+				if err := t.mixpanel.Update(originalTrackingID, &mixpanel.Update{
+					IP:        ip,
+					Operation: "$set_once",
+					Properties: map[string]interface{}{
+						"Converted To": acc.TrackingID,
+					},
+				}); err != nil {
+					return err
+				}
+			}
 		}
 	}
 
