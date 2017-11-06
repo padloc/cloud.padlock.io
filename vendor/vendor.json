@@ -3,6 +3,12 @@
 	"ignore": "test",
 	"package": [
 		{
+			"checksumSHA1": "c5kuw8JpAPTGfXAxp6vTmRlK8do=",
+			"path": "github.com/dukex/mixpanel",
+			"revision": "53bfdf679eecb9731ac23f01a89d8a6904f09037",
+			"revisionTime": "2017-05-10T16:52:55Z"
+		},
+		{
 			"checksumSHA1": "OzddgAh0uv3ukKhWW7QFUEFbxow=",
 			"origin": "github.com/maklesoft/padlock-cloud/vendor/github.com/golang/snappy",
 			"path": "github.com/golang/snappy",
@@ -82,6 +88,12 @@
 			"path": "github.com/rs/xhandler",
 			"revision": "e32fc701456b203dca2a5587242e27f292b10f7f",
 			"revisionTime": "2017-04-16T16:04:56Z"
+		},
+		{
+			"checksumSHA1": "zmC8/3V4ls53DJlNTKDZwPSC/dA=",
+			"path": "github.com/satori/go.uuid",
+			"revision": "5bf94b69c6b68ee1b541973bb8e1144db23a194b",
+			"revisionTime": "2017-03-21T23:07:31Z"
 		},
 		{
 			"checksumSHA1": "fUBULAAIG9gtfTmtHeLeN+IFbjg=",
