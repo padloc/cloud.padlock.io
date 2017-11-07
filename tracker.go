@@ -147,7 +147,9 @@ func (t *mixpanelTracker) Track(event *TrackingEvent, r *http.Request, a *pc.Aut
 	if a != nil {
 		nDevices := 0
 		platforms := make([]string, 0)
+		versions := make([]string, 0)
 		pMap := make(map[string]bool)
+		vMap := make(map[string]bool)
 		for _, token := range a.Account().AuthTokens {
 			if token.Type == "api" && !token.Expired() {
 				nDevices = nDevices + 1
@@ -156,11 +158,16 @@ func (t *mixpanelTracker) Track(event *TrackingEvent, r *http.Request, a *pc.Aut
 				platforms = append(platforms, token.Device.Platform)
 				pMap[token.Device.Platform] = true
 			}
+			if token.Device != nil && token.Device.AppVersion != "" && !vMap[token.Device.AppVersion] {
+				versions = append(versions, token.Device.AppVersion)
+				vMap[token.Device.AppVersion] = true
+			}
 		}
 
 		updateProps = map[string]interface{}{
 			"Paired Devices":      nDevices,
 			"Platforms":           platforms,
+			"Versions":            versions,
 			"Last Sync":           props["Last Sync"],
 			"Subscription Status": props["Subscription Status"],
 			"Plan":                props["Plan"],
