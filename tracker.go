@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"github.com/dukex/mixpanel"
 	pc "github.com/maklesoft/padlock-cloud/padlockcloud"
 	"github.com/satori/go.uuid"
