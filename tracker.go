@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"github.com/dukex/mixpanel"
 	pc "github.com/maklesoft/padlock-cloud/padlockcloud"
 	"github.com/satori/go.uuid"
@@ -109,15 +110,6 @@ func (t *mixpanelTracker) Track(event *TrackingEvent, r *http.Request, a *pc.Aut
 		props["App Version"] = device.AppVersion
 	}
 
-	if acc != nil {
-		subStatus := "inactive"
-		if s := acc.Subscription(); s != nil {
-			subStatus = string(s.Status)
-			props["Plan"] = s.Plan.Name
-		}
-		props["Subscription Status"] = subStatus
-	}
-
 	if err := t.mixpanel.Track(event.TrackingID, event.Name, &mixpanel.Event{
 		IP:         ip,
 		Properties: props,
@@ -125,26 +117,25 @@ func (t *mixpanelTracker) Track(event *TrackingEvent, r *http.Request, a *pc.Aut
 		return err
 	}
 
-	updateProps := map[string]interface{}{
-		"$created":         props["First Launch"],
-		"First App Launch": props["First Launch"],
-		"First Platform":   props["Platform"],
-	}
-
+	// If the user is logged in, update/create profile
 	if acc != nil {
-		updateProps["$email"] = acc.Email
-		updateProps["Created Padlock Cloud Account"] = acc.Created.UTC().Format(time.RFC3339)
-	}
 
-	if err := t.mixpanel.Update(event.TrackingID, &mixpanel.Update{
-		IP:         ip,
-		Operation:  "$set_once",
-		Properties: updateProps,
-	}); err != nil {
-		return err
-	}
+		updateOnce := map[string]interface{}{
+			"$email":                        acc.Email,
+			"Created Padlock Cloud Account": acc.Created.UTC().Format(time.RFC3339),
+			"$created":                      props["First Launch"],
+			"First App Launch":              props["First Launch"],
+			"First Platform":                props["Platform"],
+		}
 
-	if a != nil {
+		if err := t.mixpanel.Update(event.TrackingID, &mixpanel.Update{
+			IP:         ip,
+			Operation:  "$set_once",
+			Properties: updateOnce,
+		}); err != nil {
+			return err
+		}
+
 		nDevices := 0
 		platforms := make([]string, 0)
 		versions := make([]string, 0)
@@ -164,29 +155,33 @@ func (t *mixpanelTracker) Track(event *TrackingEvent, r *http.Request, a *pc.Aut
 			}
 		}
 
-		updateProps = map[string]interface{}{
-			"Paired Devices":      nDevices,
-			"Platforms":           platforms,
-			"Versions":            versions,
-			"Last Sync":           props["Last Sync"],
-			"Subscription Status": props["Subscription Status"],
-			"Plan":                props["Plan"],
+		update := map[string]interface{}{
+			"Paired Devices": nDevices,
+			"Platforms":      platforms,
+			"Versions":       versions,
+			"Last Sync":      props["Last Sync"],
+			"Last Rated":     props["Last Rated"],
+			"Rated Version":  props["Rated Version"],
+			"Rating":         props["Rating"],
+			"Last Reviewed":  props["Last Reviewed"],
 		}
-	} else {
-		updateProps = make(map[string]interface{})
-	}
 
-	updateProps["Last Rated"] = props["Last Rated"]
-	updateProps["Rated Version"] = props["Rated Version"]
-	updateProps["Rating"] = props["Rating"]
-	updateProps["Last Reviewed"] = props["Last Reviewed"]
+		subStatus := "inactive"
+		if s := acc.Subscription(); s != nil {
+			subStatus = string(s.Status)
+			update["Plan"] = s.Plan.Name
+		}
 
-	if err := t.mixpanel.Update(event.TrackingID, &mixpanel.Update{
-		IP:         ip,
-		Operation:  "$set",
-		Properties: updateProps,
-	}); err != nil {
-		return err
+		update["Subscription Status"] = subStatus
+
+		if err := t.mixpanel.Update(event.TrackingID, &mixpanel.Update{
+			IP:         ip,
+			Operation:  "$set",
+			Properties: update,
+		}); err != nil {
+			return err
+		}
+
 	}
 
 	return nil
