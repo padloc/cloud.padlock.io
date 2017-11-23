@@ -3,7 +3,6 @@ package main
 import (
 	pc "github.com/maklesoft/padlock-cloud/padlockcloud"
 	"github.com/stripe/stripe-go"
-	"path/filepath"
 )
 
 type StripeConfig struct {
@@ -18,7 +17,7 @@ type MixpanelConfig struct {
 type Server struct {
 	*pc.Server
 	Tracker
-	Templates      *Templates
+	// Templates      *Templates
 	StripeConfig   *StripeConfig
 	MixpanelConfig *MixpanelConfig
 }
@@ -72,18 +71,18 @@ func (server *Server) Init() error {
 
 	server.InitEndpoints()
 
-	if server.Templates == nil {
-		server.Templates = &Templates{
-			Templates: server.Server.Templates,
-		}
-		// Load templates from assets directory
-		if err := LoadTemplates(
-			server.Templates,
-			filepath.Join("assets", "templates"),
-		); err != nil {
-			return err
-		}
-	}
+	// if server.Templates == nil {
+	// 	server.Templates = &Templates{
+	// 		Templates: server.Server.Templates,
+	// 	}
+	// 	// Load templates from assets directory
+	// 	if err := LoadTemplates(
+	// 		server.Templates,
+	// 		filepath.Join("assets", "templates"),
+	// 	); err != nil {
+	// 		return err
+	// 	}
+	// }
 
 	stripe.Key = server.StripeConfig.SecretKey
 

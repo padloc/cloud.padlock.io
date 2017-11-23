@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	pc "github.com/maklesoft/padlock-cloud/padlockcloud"
 	"github.com/stripe/stripe-go"
 	"github.com/stripe/stripe-go/customer"
@@ -25,13 +26,11 @@ func (h *Dashboard) Handle(w http.ResponseWriter, r *http.Request, auth *pc.Auth
 	params := pc.DashboardParams(r, auth)
 	params["subAccount"] = subAcc
 	params["stripePublicKey"] = h.StripeConfig.PublicKey
-	params["subscribed"] = r.URL.Query().Get("subscribed")
-	params["unsubscribed"] = r.URL.Query().Get("unsubscribed")
 	params["hideSub"] = NoSubRequired(auth)
 
 	ref := r.URL.Query().Get("ref")
-	if ref == "" && params["paired"] != "" {
-		ref = "pair"
+	if ref == "" && params["action"] != "" {
+		ref = fmt.Sprintf("action: %s", params["action"])
 	}
 	params["ref"] = ref
 
@@ -114,7 +113,7 @@ func (h *Subscribe) Handle(w http.ResponseWriter, r *http.Request, a *pc.AuthTok
 		return err
 	}
 
-	http.Redirect(w, r, "/dashboard/?subscribed=1", http.StatusFound)
+	http.Redirect(w, r, "/dashboard/?action=subscribed", http.StatusFound)
 
 	h.Info.Printf("%s - subcribe - %s\n", pc.FormatRequest(r), acc.Email)
 
@@ -155,7 +154,7 @@ func (h *Unsubscribe) Handle(w http.ResponseWriter, r *http.Request, a *pc.AuthT
 		return err
 	}
 
-	http.Redirect(w, r, "/dashboard/?unsubscribed=1", http.StatusFound)
+	http.Redirect(w, r, "/dashboard/?action=unsubscribed", http.StatusFound)
 
 	h.Info.Printf("%s - unsubscribe - %s\n", pc.FormatRequest(r), acc.Email)
 
