@@ -23,10 +23,30 @@ func (h *Dashboard) Handle(w http.ResponseWriter, r *http.Request, auth *pc.Auth
 		return err
 	}
 
+	accMap := acc.ToMap()
+	accMap["trackingID"] = subAcc.TrackingID
+
+	if sub := subAcc.Subscription(); sub != nil {
+		accMap["subscription"] = map[string]interface{}{
+			"status":   sub.Status,
+			"trialEnd": sub.TrialEnd,
+		}
+	}
+
+	if len(subAcc.Customer.Sources.Values) != 0 {
+		source := subAcc.Customer.Sources.Values[0]
+		accMap["paymentSource"] = map[string]string{
+			"brand":    string(source.Card.Brand),
+			"lastFour": source.Card.LastFour,
+		}
+	}
+
+	accMap["displaySubscription"] = !NoSubRequired(auth)
+
 	params := pc.DashboardParams(r, auth)
-	params["subAccount"] = subAcc
+	params["account"] = accMap
+
 	params["stripePublicKey"] = h.StripeConfig.PublicKey
-	params["hideSub"] = NoSubRequired(auth)
 
 	ref := r.URL.Query().Get("ref")
 	if ref == "" && params["action"] != "" {
