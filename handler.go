@@ -61,7 +61,7 @@ func (h *Dashboard) Handle(w http.ResponseWriter, r *http.Request, auth *pc.Auth
 
 	b.WriteTo(w)
 
-	h.Track(&TrackingEvent{
+	go h.Track(&TrackingEvent{
 		TrackingID: r.URL.Query().Get("tid"),
 		Name:       "Open Dashboard",
 		Properties: map[string]interface{}{
@@ -107,6 +107,8 @@ func (h *Subscribe) Handle(w http.ResponseWriter, r *http.Request, a *pc.AuthTok
 		return wrapCardError(err)
 	}
 
+	newSubscription := !acc.HasActiveSubscription()
+
 	s := acc.Subscription()
 	if s == nil {
 		var err error
@@ -133,12 +135,22 @@ func (h *Subscribe) Handle(w http.ResponseWriter, r *http.Request, a *pc.AuthTok
 		return err
 	}
 
-	http.Redirect(w, r, "/dashboard/?action=subscribed", http.StatusFound)
+	var eventName string
+	var action string
+	if newSubscription {
+		eventName = "Buy Subscription"
+		action = "subscribed"
+	} else {
+		eventName = "Update Payment Method"
+		action = "payment-updated"
+	}
+
+	http.Redirect(w, r, "/dashboard/?action="+action, http.StatusFound)
 
 	h.Info.Printf("%s - subcribe - %s\n", pc.FormatRequest(r), acc.Email)
 
-	h.Track(&TrackingEvent{
-		Name: "Buy Subscription",
+	go h.Track(&TrackingEvent{
+		Name: eventName,
 		Properties: map[string]interface{}{
 			"Plan":   PlanYearly,
 			"Source": sourceFromRef(r.URL.Query().Get("ref")),
@@ -178,7 +190,7 @@ func (h *Unsubscribe) Handle(w http.ResponseWriter, r *http.Request, a *pc.AuthT
 
 	h.Info.Printf("%s - unsubscribe - %s\n", pc.FormatRequest(r), acc.Email)
 
-	h.Track(&TrackingEvent{
+	go h.Track(&TrackingEvent{
 		Name: "Cancel Subscription",
 		Properties: map[string]interface{}{
 			"Plan": PlanYearly,
