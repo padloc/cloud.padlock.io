@@ -47,6 +47,7 @@ func (h *Dashboard) Handle(w http.ResponseWriter, r *http.Request, auth *pc.Auth
 	params["account"] = accMap
 
 	params["stripePublicKey"] = h.StripeConfig.PublicKey
+	params["mixpanelToken"] = h.MixpanelConfig.Token
 
 	ref := r.URL.Query().Get("ref")
 	if ref == "" && params["action"] != "" {
