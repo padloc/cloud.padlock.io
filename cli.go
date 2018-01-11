@@ -128,6 +128,21 @@ func (cliApp *CliApp) UpdateAccount(context *cli.Context) error {
 	return nil
 }
 
+func (cliApp *CliApp) DeleteAccount(context *cli.Context) error {
+	email := context.Args().Get(0)
+	if email == "" {
+		return errors.New("Please provide an email address!")
+	}
+	acc := &Account{Email: email}
+
+	if err := cliApp.Storage.Open(); err != nil {
+		return err
+	}
+	defer cliApp.Storage.Close()
+
+	return cliApp.Storage.Delete(acc)
+}
+
 func NewCliApp() *CliApp {
 	config := &CliConfig{}
 	pcCli := pc.NewCliApp()
@@ -183,6 +198,11 @@ func NewCliApp() *CliApp {
 							Usage: "Stripe customer id",
 						},
 					},
+				},
+				{
+					Name:   "delete",
+					Usage:  "Delete account",
+					Action: app.DeleteAccount,
 				},
 			},
 		},
