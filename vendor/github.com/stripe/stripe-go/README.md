@@ -1,4 +1,8 @@
-# Go Stripe [![GoDoc](http://img.shields.io/badge/godoc-reference-blue.svg)](http://godoc.org/github.com/stripe/stripe-go) [![Build Status](https://travis-ci.org/stripe/stripe-go.svg?branch=master)](https://travis-ci.org/stripe/stripe-go)
+# Go Stripe
+
+[![GoDoc](http://img.shields.io/badge/godoc-reference-blue.svg)](http://godoc.org/github.com/stripe/stripe-go)
+[![Build Status](https://travis-ci.org/stripe/stripe-go.svg?branch=master)](https://travis-ci.org/stripe/stripe-go)
+[![Coverage Status](https://coveralls.io/repos/github/stripe/stripe-go/badge.svg?branch=master)](https://coveralls.io/github/stripe/stripe-go?branch=master)
 
 ## Summary
 
@@ -50,12 +54,7 @@ params := &stripe.CustomerParams{
 	Desc:  "Stripe Developer",
 	Email: "gostripe@stripe.com",
 }
-params.SetSource(&stripe.CardParams{
-	Name:   "Go Stripe",
-	Number: "378282246310005",
-	Month:  "06",
-	Year:   "15",
-})
+params.SetSource("tok_1234")
 
 customer, err := customer.New(params)
 ```
@@ -190,7 +189,7 @@ $resource$, err := $resource$.Get(id, stripe.$Resource$Params)
 $resource$, err := $resource$.Update(stripe.$Resource$Params)
 
 // Delete
-err := $resource$.Del(id)
+resourceDeleted, err := $resource$.Del(id, stripe.$Resource$Params)
 
 // List
 i := $resource$.List(stripe.$Resource$ListParams)
@@ -229,7 +228,7 @@ $resource$, err := sc.$Resource$s.Get(id, stripe.$Resource$Params)
 $resource$, err := sc.$Resource$s.Update(stripe.$Resource$Params)
 
 // Delete
-err := sc.$Resource$s.Del(id)
+resourceDeleted, err := sc.$Resource$s.Del(id, stripe.$Resource$Params)
 
 // List
 i := sc.$Resource$s.List(stripe.$Resource$ListParams)
@@ -242,6 +241,23 @@ if err := i.Err(); err != nil {
 }
 ```
 
+### Writing a Plugin
+
+If you're writing a plugin that uses the library, we'd appreciate it if you
+identified using `stripe.SetAppInfo`:
+
+```go
+stripe.SetAppInfo(&stripe.AppInfo{
+    Name:    "MyAwesomePlugin",
+    URL:     "https://myawesomeplugin.info",
+    Version: "1.2.34",
+})
+```
+
+This information is passed along when the library makes calls to the Stripe
+API. Note that while `Name` is always required, `URL` and `Version` are
+optional.
+
 ## Development
 
 Pull requests from the community are welcome. If you submit one, please keep
@@ -253,27 +269,28 @@ the following guidelines in mind:
 
 ## Test
 
-For running additional tests, follow the steps below:
+The test suite needs testify's `require` package to run:
 
-Set the `STRIPE_KEY` environment variable to match your test private key, then
-run `make test`:
+    github.com/stretchr/testify/require
 
-```sh
-STRIPE_KEY=YOUR_API_KEY make test
-```
+It also depends on [stripe-mock], so make sure to fetch and run it from a
+background terminal ([stripe-mock's README][stripe-mock] also contains
+instructions for installing via Homebrew and other methods):
 
-Or to run tests for a particular subpackage:
+    go get -u github.com/stripe/stripe-mock
+    stripe-mock
 
-```sh
-STRIPE_KEY=YOUR_API_KEY go test ./invoice
-```
+Run all tests:
 
-Or to run a particular test (it's worth noting however that Go will report a
-success even if the referenced test doesn't exist):
+    go test ./...
 
-```sh
-STRIPE_KEY=YOUR_API_KEY go test -run "TestAllInvoicesScenarios" ./invoice
-```
+Run tests for one package:
+
+    go test ./invoice
+
+Run a single test:
+
+    go test ./invoice -run TestInvoiceGet
 
 For any requests, bug or comments, please [open an issue][issues] or [submit a
 pull request][pulls].
@@ -286,3 +303,7 @@ pull request][pulls].
 [package-management]: https://code.google.com/p/go-wiki/wiki/PackageManagementTools
 [pulls]: https://github.com/stripe/stripe-go/pulls
 [stripe]: https://stripe.com
+
+<!--
+# vim: set tw=79:
+-->

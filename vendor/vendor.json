@@ -51,12 +51,6 @@
 			"revisionTime": "2017-04-16T16:04:56Z"
 		},
 		{
-			"checksumSHA1": "WUELlL24+XZSYM1q6Oqnt1SiMKo=",
-			"path": "github.com/maklesoft/cloud.padlock.io",
-			"revision": "56735b3fbfb0cff15c3212575c708b2d3e9cde07",
-			"revisionTime": "2017-09-01T07:59:49Z"
-		},
-		{
 			"checksumSHA1": "Y8nS6qCmuqkzcKOk1N7VeptDbJY=",
 			"path": "github.com/maklesoft/padlock-cloud",
 			"revision": "e32fc701456b203dca2a5587242e27f292b10f7f",
@@ -96,28 +90,40 @@
 			"revisionTime": "2017-03-21T23:07:31Z"
 		},
 		{
-			"checksumSHA1": "fUBULAAIG9gtfTmtHeLeN+IFbjg=",
+			"checksumSHA1": "t5Ea5vLthGr1qNp+qTpDLvYKCrw=",
 			"path": "github.com/stripe/stripe-go",
-			"revision": "80f843e54ca520ed9fffbc11251e56f6beff7c1d",
-			"revisionTime": "2016-10-18T21:39:04Z"
+			"revision": "4215bb4be39f20597ef7733989e9096869ad830c",
+			"revisionTime": "2018-01-09T21:04:56Z"
 		},
 		{
-			"checksumSHA1": "g4KO1AUv2DhohGAE51AkwCbF5nY=",
+			"checksumSHA1": "UPcP5J+yPlRtj93LLxJ/fYsU0t4=",
 			"path": "github.com/stripe/stripe-go/customer",
-			"revision": "80f843e54ca520ed9fffbc11251e56f6beff7c1d",
-			"revisionTime": "2016-10-18T21:39:04Z"
+			"revision": "4215bb4be39f20597ef7733989e9096869ad830c",
+			"revisionTime": "2018-01-09T21:04:56Z"
+		},
+		{
+			"checksumSHA1": "f3w9bgOzBZozw9qEuPLcQb94EEc=",
+			"path": "github.com/stripe/stripe-go/form",
+			"revision": "4215bb4be39f20597ef7733989e9096869ad830c",
+			"revisionTime": "2018-01-09T21:04:56Z"
 		},
 		{
 			"checksumSHA1": "y5AD80EvDutFqGuAYsBtcya6ntM=",
 			"path": "github.com/stripe/stripe-go/orderitem",
-			"revision": "80f843e54ca520ed9fffbc11251e56f6beff7c1d",
-			"revisionTime": "2016-10-18T21:39:04Z"
+			"revision": "4215bb4be39f20597ef7733989e9096869ad830c",
+			"revisionTime": "2018-01-09T21:04:56Z"
 		},
 		{
-			"checksumSHA1": "wDtq+7B5Im5d2T6wVtM9Zc5krjg=",
+			"checksumSHA1": "v0S3oQN258BeAz2BgwsvlZitHwo=",
+			"path": "github.com/stripe/stripe-go/plan",
+			"revision": "4215bb4be39f20597ef7733989e9096869ad830c",
+			"revisionTime": "2018-01-09T21:04:56Z"
+		},
+		{
+			"checksumSHA1": "PILusX5jFHunLGO9R1i8H2btld0=",
 			"path": "github.com/stripe/stripe-go/sub",
-			"revision": "80f843e54ca520ed9fffbc11251e56f6beff7c1d",
-			"revisionTime": "2016-10-18T21:39:04Z"
+			"revision": "4215bb4be39f20597ef7733989e9096869ad830c",
+			"revisionTime": "2018-01-09T21:04:56Z"
 		},
 		{
 			"checksumSHA1": "gAbBMXBHsWGR/2YnCgk2tvRC/Xw=",

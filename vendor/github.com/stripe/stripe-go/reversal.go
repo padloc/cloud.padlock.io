@@ -4,26 +4,26 @@ import "encoding/json"
 
 // ReversalParams is the set of parameters that can be used when reversing a transfer.
 type ReversalParams struct {
-	Params
-	Transfer string
-	Amount   uint64
-	Fee      bool
+	Params   `form:"*"`
+	Transfer string `form:"-"` // Included in URL
+	Amount   uint64 `form:"amount"`
+	Fee      bool   `form:"refund_application_fee"`
 }
 
 // ReversalListParams is the set of parameters that can be used when listing reversals.
 type ReversalListParams struct {
-	ListParams
-	Transfer string
+	ListParams `form:"*"`
+	Transfer   string `form:"-"` // Included in URL
 }
 
 // Reversal represents a transfer reversal.
 type Reversal struct {
-	ID       string            `json:"id"`
 	Amount   uint64            `json:"amount"`
 	Created  int64             `json:"created"`
 	Currency Currency          `json:"currency"`
-	Transfer string            `json:"transfer"`
+	ID       string            `json:"id"`
 	Meta     map[string]string `json:"metadata"`
+	Transfer string            `json:"transfer"`
 	Tx       *Transaction      `json:"balance_transaction"`
 }
 

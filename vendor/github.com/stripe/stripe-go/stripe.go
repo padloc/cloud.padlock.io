@@ -5,13 +5,19 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
+	"runtime"
 	"strings"
+	"sync"
 	"time"
+
+	"github.com/stripe/stripe-go/form"
 )
 
 const (
@@ -20,10 +26,10 @@ const (
 )
 
 // apiversion is the currently supported API version
-const apiversion = "2016-07-06"
+const apiversion = "2017-05-25"
 
 // clientversion is the binding version
-const clientversion = "18.7.0"
+const clientversion = "28.10.0"
 
 // defaultHTTPTimeout is the default timeout on the http.Client used by the library.
 // This is chosen to be consistent with the other Stripe language libraries and
@@ -34,10 +40,37 @@ const defaultHTTPTimeout = 80 * time.Second
 // binding.
 const TotalBackends = 2
 
+// UnknownPlatform is the string returned as the system name if we couldn't get
+// one from `uname`.
+const UnknownPlatform = "unknown platform"
+
+// AppInfo contains information about the "app" which this integration belongs
+// to. This should be reserved for plugins that wish to identify themselves
+// with Stripe.
+type AppInfo struct {
+	Name    string `json:"name"`
+	URL     string `json:"url"`
+	Version string `json:"version"`
+}
+
+// formatUserAgent formats an AppInfo in a way that's suitable to be appended
+// to a User-Agent string. Note that this format is shared between all
+// libraries so if it's changed, it should be changed everywhere.
+func (a *AppInfo) formatUserAgent() string {
+	str := a.Name
+	if a.Version != "" {
+		str += "/" + a.Version
+	}
+	if a.URL != "" {
+		str += " (" + a.URL + ")"
+	}
+	return str
+}
+
 // Backend is an interface for making calls against a Stripe service.
 // This interface exists to enable mocking for during testing if needed.
 type Backend interface {
-	Call(method, path, key string, body *RequestValues, params *Params, v interface{}) error
+	Call(method, path, key string, body *form.Values, params *Params, v interface{}) error
 	CallMultipart(method, path, key, boundary string, body io.Reader, params *Params, v interface{}) error
 }
 
@@ -69,6 +102,19 @@ const (
 // Backends are the currently supported endpoints.
 type Backends struct {
 	API, Uploads Backend
+	mu           sync.RWMutex
+}
+
+// stripeClientUserAgent contains information about the current runtime which
+// is serialized and sent in the `X-Stripe-Client-User-Agent` as additional
+// debugging information.
+type stripeClientUserAgent struct {
+	Application     *AppInfo `json:"application"`
+	BindingsVersion string   `json:"bindings_version"`
+	Language        string   `json:"lang"`
+	LanguageVersion string   `json:"lang_version"`
+	Publisher       string   `json:"publisher"`
+	Uname           string   `json:"uname"`
 }
 
 // Key is the Stripe API key used globally in the binding.
@@ -84,15 +130,23 @@ var LogLevel = 2
 // Logger controls how stripe performs logging at a package level. It is useful
 // to customise if you need it prefixed for your application to meet other
 // requirements
-var Logger *log.Logger
+var Logger Printfer
 
-func init() {
-	// setup the logger
-	Logger = log.New(os.Stderr, "", log.LstdFlags)
+// Printfer is an interface to be implemented by Logger.
+type Printfer interface {
+	Printf(format string, v ...interface{})
 }
 
+func init() {
+	Logger = log.New(os.Stderr, "", log.LstdFlags)
+	initUserAgent()
+}
+
+var appInfo *AppInfo
 var httpClient = &http.Client{Timeout: defaultHTTPTimeout}
 var backends Backends
+var encodedStripeUserAgent string
+var encodedUserAgent string
 
 // SetHTTPClient overrides the default HTTP client.
 // This is useful if you're running in a Google AppEngine environment
@@ -105,31 +159,42 @@ func SetHTTPClient(client *http.Client) {
 // should only need to use this for testing purposes or on App Engine.
 func NewBackends(httpClient *http.Client) *Backends {
 	return &Backends{
-		API: BackendConfiguration{
+		API: &BackendConfiguration{
 			APIBackend, APIURL, httpClient},
-		Uploads: BackendConfiguration{
+		Uploads: &BackendConfiguration{
 			UploadsBackend, UploadsURL, httpClient},
 	}
 }
 
 // GetBackend returns the currently used backend in the binding.
 func GetBackend(backend SupportedBackend) Backend {
-	var ret Backend
 	switch backend {
 	case APIBackend:
-		if backends.API == nil {
-			backends.API = BackendConfiguration{backend, apiURL, httpClient}
+		backends.mu.RLock()
+		ret := backends.API
+		backends.mu.RUnlock()
+		if ret != nil {
+			return ret
 		}
+		backends.mu.Lock()
+		defer backends.mu.Unlock()
+		backends.API = &BackendConfiguration{backend, apiURL, httpClient}
+		return backends.API
 
-		ret = backends.API
 	case UploadsBackend:
-		if backends.Uploads == nil {
-			backends.Uploads = BackendConfiguration{backend, uploadsURL, httpClient}
+		backends.mu.RLock()
+		ret := backends.Uploads
+		backends.mu.RUnlock()
+		if ret != nil {
+			return ret
 		}
-		ret = backends.Uploads
+		backends.mu.Lock()
+		defer backends.mu.Unlock()
+		backends.Uploads = &BackendConfiguration{backend, uploadsURL, httpClient}
+		return backends.Uploads
 	}
 
-	return ret
+	return nil
 }
 
 // SetBackend sets the backend used in the binding.
@@ -143,7 +208,7 @@ func SetBackend(backend SupportedBackend, b Backend) {
 }
 
 // Call is the Backend.Call implementation for invoking Stripe APIs.
-func (s BackendConfiguration) Call(method, path, key string, form *RequestValues, params *Params, v interface{}) error {
+func (s *BackendConfiguration) Call(method, path, key string, form *form.Values, params *Params, v interface{}) error {
 	var body io.Reader
 	if form != nil && !form.Empty() {
 		data := form.Encode()
@@ -167,7 +232,7 @@ func (s BackendConfiguration) Call(method, path, key string, form *RequestValues
 }
 
 // CallMultipart is the Backend.CallMultipart implementation for invoking Stripe APIs.
-func (s BackendConfiguration) CallMultipart(method, path, key, boundary string, body io.Reader, params *Params, v interface{}) error {
+func (s *BackendConfiguration) CallMultipart(method, path, key, boundary string, body io.Reader, params *Params, v interface{}) error {
 	contentType := "multipart/form-data; boundary=" + boundary
 
 	req, err := s.NewRequest(method, path, key, contentType, body, params)
@@ -199,9 +264,19 @@ func (s *BackendConfiguration) NewRequest(method, path, key, contentType string,
 		return nil, err
 	}
 
-	req.SetBasicAuth(key, "")
+	authorization := "Bearer " + key
+
+	req.Header.Add("Authorization", authorization)
+	req.Header.Add("Stripe-Version", apiversion)
+	req.Header.Add("User-Agent", encodedUserAgent)
+	req.Header.Add("Content-Type", contentType)
+	req.Header.Add("X-Stripe-Client-User-Agent", encodedStripeUserAgent)
 
 	if params != nil {
+		if params.Context != nil {
+			req = req.WithContext(params.Context)
+		}
+
 		if idempotency := strings.TrimSpace(params.IdempotencyKey); idempotency != "" {
 			if len(idempotency) > 255 {
 				return nil, errors.New("Cannot use an IdempotencyKey longer than 255 characters long.")
@@ -219,11 +294,13 @@ func (s *BackendConfiguration) NewRequest(method, path, key, contentType string,
 		if stripeAccount := strings.TrimSpace(params.StripeAccount); stripeAccount != "" {
 			req.Header.Add("Stripe-Account", stripeAccount)
 		}
-	}
 
-	req.Header.Add("Stripe-Version", apiversion)
-	req.Header.Add("User-Agent", "Stripe/v1 GoBindings/"+clientversion)
-	req.Header.Add("Content-Type", contentType)
+		for k, v := range params.Headers {
+			for _, line := range v {
+				req.Header.Add(k, line)
+			}
+		}
+	}
 
 	return req, nil
 }
@@ -282,7 +359,11 @@ func (s *BackendConfiguration) ResponseToError(res *http.Response, resBody []byt
 	// so unmarshalling to a map for now and parsing the results manually
 	// but should investigate later
 	var errMap map[string]interface{}
-	json.Unmarshal(resBody, &errMap)
+
+	err := json.Unmarshal(resBody, &errMap)
+	if err != nil {
+		return err
+	}
 
 	e, ok := errMap["error"]
 	if !ok {
@@ -347,4 +428,60 @@ func (s *BackendConfiguration) ResponseToError(res *http.Response, resBody []byt
 	}
 
 	return stripeErr
+}
+
+// SetAppInfo sets app information. See AppInfo.
+func SetAppInfo(info *AppInfo) {
+	if info != nil && info.Name == "" {
+		panic(fmt.Errorf("App info name cannot be empty"))
+	}
+	appInfo = info
+
+	// This is run in init, but we need to reinitialize it now that we have
+	// some app info.
+	initUserAgent()
+}
+
+// getUname tries to get a uname from the system, but not that hard. It tries
+// to execute `uname -a`, but swallows any errors in case that didn't work
+// (i.e. non-Unix non-Mac system or some other reason).
+func getUname() string {
+	path, err := exec.LookPath("uname")
+	if err != nil {
+		return UnknownPlatform
+	}
+
+	cmd := exec.Command(path, "-a")
+	var out bytes.Buffer
+	cmd.Stderr = nil // goes to os.DevNull
+	cmd.Stdout = &out
+	err = cmd.Run()
+	if err != nil {
+		return UnknownPlatform
+	}
+
+	return out.String()
+}
+
+func initUserAgent() {
+	encodedUserAgent = "Stripe/v1 GoBindings/" + clientversion
+	if appInfo != nil {
+		encodedUserAgent += " " + appInfo.formatUserAgent()
+	}
+
+	stripeUserAgent := &stripeClientUserAgent{
+		Application:     appInfo,
+		BindingsVersion: clientversion,
+		Language:        "go",
+		LanguageVersion: runtime.Version(),
+		Publisher:       "stripe",
+		Uname:           getUname(),
+	}
+	marshaled, err := json.Marshal(stripeUserAgent)
+	// Encoding this struct should never be a problem, so we're okay to panic
+	// in case it is for some reason.
+	if err != nil {
+		panic(err)
+	}
+	encodedStripeUserAgent = string(marshaled)
 }

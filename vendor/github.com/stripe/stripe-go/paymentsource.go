@@ -3,23 +3,20 @@ package stripe
 import (
 	"encoding/json"
 	"fmt"
+
+	"github.com/stripe/stripe-go/form"
 )
 
 // SourceParams is a union struct used to describe an
 // arbitrary payment source.
 type SourceParams struct {
-	Token string
-	Card  *CardParams
+	Card  *CardParams `form:"-"`
+	Token string      `form:"source"`
 }
 
-// AppendDetails adds the source's details to the query string values.
-// For cards: when creating a new one, the parameters are passed as a dictionary, but
-// on updates they are simply the parameter name.
-func (sp *SourceParams) AppendDetails(values *RequestValues, creating bool) {
-	if len(sp.Token) > 0 {
-		values.Add("source", sp.Token)
-	} else if sp.Card != nil {
-		sp.Card.AppendDetails(values, creating)
+func (p *SourceParams) AppendTo(body *form.Values, keyParts []string) {
+	if p.Card != nil {
+		p.Card.AppendToAsCardSourceOrExternalAccount(body, keyParts)
 	}
 }
 
@@ -27,17 +24,18 @@ func (sp *SourceParams) AppendDetails(values *RequestValues, creating bool) {
 // Customer object's payment sources.
 // For more details see https://stripe.com/docs/api#sources
 type CustomerSourceParams struct {
-	Params
-	Customer string
-	Source   *SourceParams
+	Params   `form:"*"`
+	Customer string        `form:"-"` // Goes in the URL
+	Source   *SourceParams `form:"*"` // SourceParams has custom encoding so brought to top level with "*"
 }
 
 // SourceVerifyParams are used to verify a customer source
 // For more details see https://stripe.com/docs/guides/ach-beta
 type SourceVerifyParams struct {
-	Params
-	Customer string
-	Amounts  [2]uint8
+	Params   `form:"*"`
+	Amounts  [2]int64 `form:"amounts"` // Amounts is used when verifying bank accounts
+	Customer string   `form:"-"`       // Goes in the URL
+	Values   []string `form:"values"`  // Values is used when verifying sources
 }
 
 // SetSource adds valid sources to a CustomerSourceParams object,
@@ -72,15 +70,14 @@ func SourceParamsFor(obj interface{}) (*SourceParams, error) {
 	return sp, err
 }
 
-// Displayer provides a human readable representation of a struct
-type Displayer interface {
-	Display() string
-}
-
 // PaymentSourceType consts represent valid payment sources.
 type PaymentSourceType string
 
 const (
+	// PaymentSourceAccount is a constant representing a payment source which is
+	// an account.
+	PaymentSourceAccount PaymentSourceType = "account"
+
 	// PaymentSourceBankAccount is a constant representing a payment source
 	// which is a bank account.
 	PaymentSourceBankAccount PaymentSourceType = "bank_account"
@@ -89,26 +86,26 @@ const (
 	// which is a Bitcoin receiver.
 	PaymentSourceBitcoinReceiver PaymentSourceType = "bitcoin_receiver"
 
-	// PaymentSourceObject is a constant representing a payment source which
-	// is a top level source object (/v1/sources).
-	PaymentSourceObject PaymentSourceType = "source"
-
 	// PaymentSourceCard is a constant representing a payment source which is a
 	// card.
 	PaymentSourceCard PaymentSourceType = "card"
+
+	// PaymentSourceObject is a constant representing a payment source which
+	// is a top level source object (/v1/sources).
+	PaymentSourceObject PaymentSourceType = "source"
 )
 
 // PaymentSource describes the payment source used to make a Charge.
 // The Type should indicate which object is fleshed out (eg. BitcoinReceiver or Card)
 // For more details see https://stripe.com/docs/api#retrieve_charge
 type PaymentSource struct {
-	Type            PaymentSourceType `json:"object"`
-	ID              string            `json:"id"`
 	BankAccount     *BankAccount      `json:"-"`
 	BitcoinReceiver *BitcoinReceiver  `json:"-"`
 	Card            *Card             `json:"-"`
-	SourceObject    *Source           `json:"-"`
 	Deleted         bool              `json:"deleted"`
+	ID              string            `json:"id"`
+	SourceObject    *Source           `json:"-"`
+	Type            PaymentSourceType `json:"object"`
 }
 
 // SourceList is a list object for cards.
@@ -120,24 +117,8 @@ type SourceList struct {
 // SourceListParams are used to enumerate the payment sources that are attached
 // to a Customer.
 type SourceListParams struct {
-	ListParams
-	Customer string
-}
-
-// Display human readable representation of source.
-func (s *PaymentSource) Display() string {
-	switch s.Type {
-	case PaymentSourceBankAccount:
-		return s.BankAccount.Display()
-	case PaymentSourceBitcoinReceiver:
-		return s.BitcoinReceiver.Display()
-	case PaymentSourceCard:
-		return s.Card.Display()
-	case PaymentSourceObject:
-		return s.SourceObject.Display()
-	}
-
-	return ""
+	ListParams `form:"*"`
+	Customer   string `form:"-"` // Handled in URL
 }
 
 // UnmarshalJSON handles deserialization of a PaymentSource.
@@ -152,13 +133,17 @@ func (s *PaymentSource) UnmarshalJSON(data []byte) error {
 
 		switch s.Type {
 		case PaymentSourceBankAccount:
-			json.Unmarshal(data, &s.BankAccount)
+			err = json.Unmarshal(data, &s.BankAccount)
 		case PaymentSourceBitcoinReceiver:
-			json.Unmarshal(data, &s.BitcoinReceiver)
+			err = json.Unmarshal(data, &s.BitcoinReceiver)
 		case PaymentSourceCard:
-			json.Unmarshal(data, &s.Card)
+			err = json.Unmarshal(data, &s.Card)
 		case PaymentSourceObject:
-			json.Unmarshal(data, &s.SourceObject)
+			err = json.Unmarshal(data, &s.SourceObject)
+		}
+
+		if err != nil {
+			return err
 		}
 	} else {
 		// the id is surrounded by "\" characters, so strip them
@@ -177,11 +162,11 @@ func (s *PaymentSource) MarshalJSON() ([]byte, error) {
 	switch s.Type {
 	case PaymentSourceBitcoinReceiver:
 		target = struct {
-			Type PaymentSourceType `json:"object"`
 			*BitcoinReceiver
+			Type PaymentSourceType `json:"object"`
 		}{
-			Type:            s.Type,
 			BitcoinReceiver: s.BitcoinReceiver,
+			Type:            s.Type,
 		}
 	case PaymentSourceCard:
 		var customerID *string
@@ -190,15 +175,22 @@ func (s *PaymentSource) MarshalJSON() ([]byte, error) {
 		}
 
 		target = struct {
-			Type     PaymentSourceType `json:"object"`
-			Customer *string           `json:"customer"`
 			*Card
+			Customer *string           `json:"customer"`
+			Type     PaymentSourceType `json:"object"`
 		}{
-			Type:     s.Type,
-			Customer: customerID,
 			Card:     s.Card,
+			Customer: customerID,
+			Type:     s.Type,
 		}
-
+	case PaymentSourceAccount:
+		target = struct {
+			ID   string            `json:"id"`
+			Type PaymentSourceType `json:"object"`
+		}{
+			ID:   s.ID,
+			Type: s.Type,
+		}
 	case "":
 		target = s.ID
 	}

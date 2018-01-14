@@ -2,10 +2,12 @@ package stripe
 
 import (
 	"reflect"
+
+	"github.com/stripe/stripe-go/form"
 )
 
 // Query is the function used to get a page listing.
-type Query func(*RequestValues) ([]interface{}, ListMeta, error)
+type Query func(*form.Values) ([]interface{}, ListMeta, error)
 
 // Iter provides a convenient interface
 // for iterating over the elements
@@ -16,17 +18,17 @@ type Query func(*RequestValues) ([]interface{}, ListMeta, error)
 // Iterators are not thread-safe, so they should not be consumed
 // across multiple goroutines.
 type Iter struct {
-	query  Query
-	qs     *RequestValues
-	values []interface{}
+	cur    interface{}
+	err    error
 	meta   ListMeta
 	params ListParams
-	err    error
-	cur    interface{}
+	qs     *form.Values
+	query  Query
+	values []interface{}
 }
 
 // GetIter returns a new Iter for a given query and its options.
-func GetIter(params *ListParams, qs *RequestValues, query Query) *Iter {
+func GetIter(params *ListParams, qs *form.Values, query Query) *Iter {
 	iter := &Iter{}
 	iter.query = query
 
@@ -38,7 +40,7 @@ func GetIter(params *ListParams, qs *RequestValues, query Query) *Iter {
 
 	q := qs
 	if q == nil {
-		q = &RequestValues{}
+		q = &form.Values{}
 	}
 	iter.qs = q
 

@@ -3,13 +3,13 @@ package stripe
 import "encoding/json"
 
 type OrderReturn struct {
-	ID       string      `json:"id"`
 	Amount   int64       `json:"amount"`
 	Created  int64       `json:"created"`
 	Currency Currency    `json:"currency"`
+	ID       string      `json:"id"`
 	Items    []OrderItem `json:"items"`
-	Live     bool        `json:"livemode"`
 	Order    Order       `json:"order"`
+	Live     bool        `json:"livemode"`
 	Refund   *Refund     `json:"refund"`
 }
 
@@ -22,8 +22,10 @@ type OrderReturnList struct {
 // OrderReturnListParams is the set of parameters that can be used when listing
 // returns. For more details, see: https://stripe.com/docs/api#list_order_returns.
 type OrderReturnListParams struct {
-	ListParams
-	Order string
+	ListParams   `form:"*"`
+	Created      int64             `form:"created"`
+	CreatedRange *RangeQueryParams `form:"created"`
+	Order        string            `form:"order"`
 }
 
 // UnmarshalJSON handles deserialization of an OrderReturn.

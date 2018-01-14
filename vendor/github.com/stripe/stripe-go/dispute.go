@@ -19,46 +19,67 @@ type DisputeStatus string
 // DisputeParams is the set of parameters that can be used when updating a dispute.
 // For more details see https://stripe.com/docs/api#update_dispute.
 type DisputeParams struct {
-	Params
-	Evidence *DisputeEvidenceParams
+	Params   `form:"*"`
+	Evidence *DisputeEvidenceParams `form:"evidence"`
+	NoSubmit bool                   `form:"submit,invert"`
 }
 
 // DisputeEvidenceParams is the set of parameters that can be used when submitting
 // evidence for disputes.
 type DisputeEvidenceParams struct {
-	ProductDesc, CustomerName, CustomerEmail, CustomerIP, CustomerSig, BillingAddress, Receipt string
-	ShippingAddress, ShippingDate, ShippingTracking, ShippingDoc                               string
-	RefundPolicy, RefundPolicyDisclosure, RefundRefusalReason                                  string
-	CancellationPolicy, CancellationPolicyDisclsoure, CancellationRebuttal                     string
-	ActivityLog                                                                                string
-	ServiceDate, ServiceDoc                                                                    string
-	DuplicateCharge, DuplicateChargeReason, DuplicateChargeDoc                                 string
-	CustomerComm, UncategorizedText, UncategorizedFile                                         string
+	ActivityLog                  string `form:"access_activity_log"`
+	BillingAddress               string `form:"billing_address"`
+	CancellationPolicy           string `form:"cancellation_policy"`
+	CancellationPolicyDisclsoure string `form:"cancellation_policy_disclosure"`
+	CancellationRebuttal         string `form:"cancellation_rebuttal"`
+	CustomerComm                 string `form:"customer_communication"`
+	CustomerEmail                string `form:"customer_email_address"`
+	CustomerIP                   string `form:"customer_purchase_ip"`
+	CustomerName                 string `form:"customer_name"`
+	CustomerSig                  string `form:"customer_signature"`
+	DuplicateCharge              string `form:"duplicate_charge_id"`
+	DuplicateChargeDoc           string `form:"duplicate_charge_documentation"`
+	DuplicateChargeReason        string `form:"duplicate_charge_explanation"`
+	ProductDesc                  string `form:"product_description"`
+	Receipt                      string `form:"receipt"`
+	RefundPolicy                 string `form:"refund_policy"`
+	RefundPolicyDisclosure       string `form:"refund_policy_disclosure"`
+	RefundRefusalReason          string `form:"refund_refusal_explanation"`
+	ServiceDate                  string `form:"service_date"`
+	ServiceDoc                   string `form:"service_documentation"`
+	ShippingAddress              string `form:"shipping_address"`
+	ShippingCarrier              string `form:"shipping_carrier"`
+	ShippingDate                 string `form:"shipping_date"`
+	ShippingDoc                  string `form:"shipping_documentation"`
+	ShippingTracking             string `form:"shipping_tracking_number"`
+	UncategorizedFile            string `form:"uncategorized_file"`
+	UncategorizedText            string `form:"uncategorized_text"`
 }
 
 // DisputeListParams is the set of parameters that can be used when listing disputes.
 // For more details see https://stripe.com/docs/api#list_disputes.
 type DisputeListParams struct {
-	ListParams
-	Created int64
+	ListParams   `form:"*"`
+	Created      int64             `form:"created"`
+	CreatedRange *RangeQueryParams `form:"created"`
 }
 
 // Dispute is the resource representing a Stripe dispute.
 // For more details see https://stripe.com/docs/api#disputes.
 type Dispute struct {
-	ID              string            `json:"id"`
-	Live            bool              `json:"livemode"`
 	Amount          uint64            `json:"amount"`
-	Currency        Currency          `json:"currency"`
 	Charge          string            `json:"charge"`
 	Created         int64             `json:"created"`
-	Refundable      bool              `json:"is_charge_refundable"`
-	Reason          DisputeReason     `json:"reason"`
-	Status          DisputeStatus     `json:"status"`
-	Transactions    []*Transaction    `json:"balance_transactions"`
+	Currency        Currency          `json:"currency"`
 	Evidence        *DisputeEvidence  `json:"evidence"`
 	EvidenceDetails *EvidenceDetails  `json:"evidence_details"`
+	ID              string            `json:"id"`
+	Live            bool              `json:"livemode"`
 	Meta            map[string]string `json:"metadata"`
+	Reason          DisputeReason     `json:"reason"`
+	Refundable      bool              `json:"is_charge_refundable"`
+	Status          DisputeStatus     `json:"status"`
+	Transactions    []*Transaction    `json:"balance_transactions"`
 }
 
 // DisputeList is a list of disputes as retrieved from a list endpoint.
@@ -81,149 +102,60 @@ type EvidenceDetails struct {
 // Almost all fields are strings since there structures (i.e. address)
 // do not typically get parsed by anyone and are thus presented as-received.
 type DisputeEvidence struct {
-	ProductDesc                  string `json:"product_description"`
-	CustomerName                 string `json:"customer_name"`
-	CustomerEmail                string `json:"customer_email_address"`
-	CustomerIP                   string `json:"customer_purchase_ip"`
-	CustomerSig                  *File  `json:"customer_signature"`
+	ActivityLog                  string `json:"access_activity_log"`
 	BillingAddress               string `json:"billing_address"`
-	Receipt                      *File  `json:"receipt"`
-	ShippingAddress              string `json:"shipping_address"`
-	ShippingDate                 string `json:"shipping_date"`
-	ShippingTracking             string `json:"shipping_tracking_number"`
-	ShippingDoc                  *File  `json:"shipping_documentation"`
-	RefundPolicy                 *File  `json:"refund_policy"`
-	RefundPolicyDisclosure       string `json:"refund_policy_disclosure"`
-	RefundRefusalReason          string `json:"refund_refusal_explanation"`
 	CancellationPolicy           *File  `json:"cancellation_policy"`
 	CancellationPolicyDisclosure string `json:"cancellation_policy_disclosure"`
 	CancellationRebuttal         string `json:"cancellation_rebuttal"`
-	ActivityLog                  string `json:"access_activity_log"`
+	CustomerComm                 *File  `json:"customer_communication"`
+	CustomerEmail                string `json:"customer_email_address"`
+	CustomerIP                   string `json:"customer_purchase_ip"`
+	CustomerName                 string `json:"customer_name"`
+	CustomerSig                  *File  `json:"customer_signature"`
+	DuplicateCharge              string `json:"duplicate_charge_id"`
+	DuplicateChargeDoc           *File  `json:"duplicate_charge_documentation"`
+	DuplicateChargeReason        string `json:"duplicate_charge_explanation"`
+	ProductDesc                  string `json:"product_description"`
+	Receipt                      *File  `json:"receipt"`
+	RefundPolicy                 *File  `json:"refund_policy"`
+	RefundPolicyDisclosure       string `json:"refund_policy_disclosure"`
+	RefundRefusalReason          string `json:"refund_refusal_explanation"`
 	ServiceDate                  string `json:"service_date"`
 	ServiceDoc                   *File  `json:"service_documentation"`
-	DuplicateCharge              string `json:"duplicate_charge_id"`
-	DuplicateChargeReason        string `json:"duplicate_charge_explanation"`
-	DuplicateChargeDoc           *File  `json:"duplicate_charge_documentation"`
-	CustomerComm                 *File  `json:"customer_communication"`
-	UncategorizedText            string `json:"uncategorized_text"`
+	ShippingAddress              string `json:"shipping_address"`
+	ShippingCarrier              string `json:"shipping_carrier"`
+	ShippingDate                 string `json:"shipping_date"`
+	ShippingDoc                  *File  `json:"shipping_documentation"`
+	ShippingTracking             string `json:"shipping_tracking_number"`
 	UncategorizedFile            *File  `json:"uncategorized_file"`
+	UncategorizedText            string `json:"uncategorized_text"`
 }
 
 // File represents a link to downloadable content.
 type File struct {
-	ID      string `json:"id"`
 	Created int64  `json:"created"`
-	Size    int    `json:"size"`
-	Purpose string `json:"purpose"`
-	URL     string `json:"url"`
+	ID      string `json:"id"`
 	Mime    string `json:"mime_type"`
+	Purpose string `json:"purpose"`
+	Size    int    `json:"size"`
+	URL     string `json:"url"`
 }
 
-// AppendDetails adds the dispute evidence details to the query string values.
-func (e *DisputeEvidenceParams) AppendDetails(values *RequestValues) {
-	if len(e.ProductDesc) > 0 {
-		values.Add("evidence[product_description]", e.ProductDesc)
+// UnmarshalJSON handles deserialization of a Dispute.
+// This custom unmarshaling is needed because the resulting
+// property may be an id or the full struct if it was expanded.
+func (t *Dispute) UnmarshalJSON(data []byte) error {
+	type dispute Dispute
+	var dd dispute
+	err := json.Unmarshal(data, &dd)
+	if err == nil {
+		*t = Dispute(dd)
+	} else {
+		// the id is surrounded by "\" characters, so strip them
+		t.ID = string(data[1 : len(data)-1])
 	}
 
-	if len(e.CustomerName) > 0 {
-		values.Add("evidence[customer_name]", e.CustomerName)
-	}
-
-	if len(e.CustomerEmail) > 0 {
-		values.Add("evidence[customer_email_address]", e.CustomerEmail)
-	}
-
-	if len(e.CustomerIP) > 0 {
-		values.Add("evidence[customer_purchase_ip]", e.CustomerIP)
-	}
-
-	if len(e.CustomerSig) > 0 {
-		values.Add("evidence[customer_signature]", e.CustomerSig)
-	}
-
-	if len(e.BillingAddress) > 0 {
-		values.Add("evidence[billing_address]", e.BillingAddress)
-	}
-
-	if len(e.Receipt) > 0 {
-		values.Add("evidence[receipt]", e.Receipt)
-	}
-
-	if len(e.ShippingAddress) > 0 {
-		values.Add("evidence[shipping_address]", e.ShippingAddress)
-	}
-
-	if len(e.ShippingDate) > 0 {
-		values.Add("evidence[shipping_date]", e.ShippingDate)
-	}
-
-	if len(e.ShippingTracking) > 0 {
-		values.Add("evidence[shipping_tracking_number]", e.ShippingTracking)
-	}
-
-	if len(e.ShippingDoc) > 0 {
-		values.Add("evidence[shipping_documentation]", e.ShippingDoc)
-	}
-
-	if len(e.RefundPolicy) > 0 {
-		values.Add("evidence[refund_policy]", e.RefundPolicy)
-	}
-
-	if len(e.RefundPolicyDisclosure) > 0 {
-		values.Add("evidence[refund_policy_disclosure]", e.RefundPolicyDisclosure)
-	}
-
-	if len(e.RefundRefusalReason) > 0 {
-		values.Add("evidence[refund_refusal_explanation]", e.RefundRefusalReason)
-	}
-
-	if len(e.CancellationPolicy) > 0 {
-		values.Add("evidence[cancellation_policy]", e.CancellationPolicy)
-	}
-
-	if len(e.CancellationPolicyDisclsoure) > 0 {
-		values.Add("evidence[cancellation_policy_disclosure]", e.CancellationPolicyDisclsoure)
-	}
-
-	if len(e.CancellationRebuttal) > 0 {
-		values.Add("evidence[cancellation_rebuttal]", e.CancellationRebuttal)
-	}
-
-	if len(e.ActivityLog) > 0 {
-		values.Add("evidence[access_activity_log]", e.ActivityLog)
-	}
-
-	if len(e.ServiceDate) > 0 {
-		values.Add("evidence[service_date]", e.ServiceDate)
-	}
-
-	if len(e.ServiceDoc) > 0 {
-		values.Add("evidence[service_documentation]", e.ServiceDoc)
-	}
-
-	if len(e.DuplicateCharge) > 0 {
-		values.Add("evidence[duplicate_charge_id]", e.DuplicateCharge)
-	}
-
-	if len(e.DuplicateChargeReason) > 0 {
-		values.Add("evidence[duplicate_charge_explanation]", e.DuplicateChargeReason)
-	}
-
-	if len(e.DuplicateChargeDoc) > 0 {
-		values.Add("evidence[duplicate_charge_documentation]", e.DuplicateChargeDoc)
-	}
-
-	if len(e.CustomerComm) > 0 {
-		values.Add("evidence[customer_communication]", e.CustomerComm)
-	}
-
-	if len(e.UncategorizedText) > 0 {
-		values.Add("evidence[uncategorized_text]", e.UncategorizedText)
-	}
-
-	if len(e.UncategorizedFile) > 0 {
-		values.Add("evidence[uncategorized_file]", e.UncategorizedFile)
-	}
+	return nil
 }
 
 // UnmarshalJSON handles deserialization of a File.

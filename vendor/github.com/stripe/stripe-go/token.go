@@ -7,39 +7,38 @@ type TokenType string
 // TokenParams is the set of parameters that can be used when creating a token.
 // For more details see https://stripe.com/docs/api#create_card_token and https://stripe.com/docs/api#create_bank_account_token.
 type TokenParams struct {
-	Params
-	Card     *CardParams
-	Bank     *BankAccountParams
-	PII      *PIIParams
-	Customer string
+	Params   `form:"*"`
+	Bank     *BankAccountParams `form:"bank_account"`
+	Card     *CardParams        `form:"card"`
+	Customer string             `form:"customer"`
+
 	// Email is an undocumented parameter used by Stripe Checkout
 	// It may be removed from the API without notice.
-	Email string
+	Email string `form:"email"`
+
+	PII *PIIParams `form:"pii"`
 }
 
 // Token is the resource representing a Stripe token.
 // For more details see https://stripe.com/docs/api#tokens.
 type Token struct {
-	ID       string       `json:"id"`
-	Live     bool         `json:"livemode"`
-	Created  int64        `json:"created"`
-	Type     TokenType    `json:"type"`
-	Used     bool         `json:"used"`
 	Bank     *BankAccount `json:"bank_account"`
 	Card     *Card        `json:"card"`
 	ClientIP string       `json:"client_ip"`
+	Created  int64        `json:"created"`
+
 	// Email is an undocumented field but included for all tokens created
 	// with Stripe Checkout.
 	Email string `json:"email"`
+
+	ID   string    `json:"id"`
+	Live bool      `json:"livemode"`
+	Type TokenType `json:"type"`
+	Used bool      `json:"used"`
 }
 
 // PIIParams are parameters for personal identifiable information (PII).
 type PIIParams struct {
-	Params
-	PersonalIDNumber string
-}
-
-// AppendDetails adds the PII data's details to the query string values.
-func (p *PIIParams) AppendDetails(values *RequestValues) {
-	values.Add("pii[personal_id_number]", p.PersonalIDNumber)
+	Params           `form:"*"`
+	PersonalIDNumber string `form:"personal_id_number"`
 }

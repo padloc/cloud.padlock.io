@@ -12,16 +12,28 @@ import (
 // file upload.
 // For more details see https://stripe.com/docs/api#create_file_upload.
 type FileUploadParams struct {
-	Params
+	Params `form:"*"`
+
+	// File is a deprecated form of FileReader and Filename that will do the same thing, but
+	// allows referencing a file directly. Please prefer the use of FileReader and Filename instead.
+	File *os.File
+
+	// FileReader is a reader with the contents of the file that should be uploaded.
+	FileReader io.Reader
+
+	// Filename is just the name of the file without path information.
+	Filename string
+
 	Purpose FileUploadPurpose
-	File    *os.File
 }
 
 // FileUploadListParams is the set of parameters that can be used when listing
 // file uploads. For more details see https://stripe.com/docs/api#list_file_uploads.
 type FileUploadListParams struct {
-	Purpose FileUploadPurpose
-	ListParams
+	ListParams   `form:"*"`
+	Created      int64             `form:"created"`
+	CreatedRange *RangeQueryParams `form:"created"`
+	Purpose      FileUploadPurpose `form:"purpose"`
 }
 
 // FileUploadPurpose is the purpose of a particular file upload. Allowed values
@@ -31,12 +43,12 @@ type FileUploadPurpose string
 // FileUpload is the resource representing a Stripe file upload.
 // For more details see https://stripe.com/docs/api#file_uploads.
 type FileUpload struct {
-	ID      string            `json:"id"`
 	Created int64             `json:"created"`
-	Size    int64             `json:"size"`
+	ID      string            `json:"id"`
 	Purpose FileUploadPurpose `json:"purpose"`
-	URL     string            `json:"url"`
+	Size    int64             `json:"size"`
 	Type    string            `json:"type"`
+	URL     string            `json:"url"`
 }
 
 // FileUploadList is a list of file uploads as retrieved from a list endpoint.
@@ -59,7 +71,19 @@ func (f *FileUploadParams) AppendDetails(body io.ReadWriter) (string, error) {
 		}
 	}
 
-	if f.File != nil {
+	// Support both FileReader/Filename and File with
+	// the former being the newer preferred version
+	if f.FileReader != nil && f.Filename != "" {
+		part, err := writer.CreateFormFile("file", filepath.Base(f.Filename))
+		if err != nil {
+			return "", err
+		}
+
+		_, err = io.Copy(part, f.FileReader)
+		if err != nil {
+			return "", err
+		}
+	} else if f.File != nil {
 		part, err := writer.CreateFormFile("file", filepath.Base(f.File.Name()))
 		if err != nil {
 			return "", err
