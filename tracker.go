@@ -168,7 +168,7 @@ func (t *mixpanelTracker) Track(event *TrackingEvent, r *http.Request, a *pc.Aut
 		subStatus := "inactive"
 		if s := acc.Subscription(); s != nil {
 			subStatus = string(s.Status)
-			update["Plan"] = s.Plan.Name
+			update["Plan"] = s.Plan.ID
 		}
 
 		update["Subscription Status"] = subStatus

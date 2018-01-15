@@ -5,11 +5,17 @@ import (
 	pc "github.com/maklesoft/padlock-cloud/padlockcloud"
 	"github.com/stripe/stripe-go"
 	"github.com/stripe/stripe-go/customer"
+	"github.com/stripe/stripe-go/sub"
+	"math/rand"
 	"time"
 )
 
-const PlanMonthly = "padlock-cloud-monthly"
-const PlanYearly = "padlock-cloud-yearly"
+var AvailablePlans []*stripe.Plan
+
+func ChoosePlan() string {
+	plan := AvailablePlans[rand.Intn(len(AvailablePlans))]
+	return plan.ID
+}
 
 type Account struct {
 	Email      string
@@ -21,14 +27,11 @@ type Account struct {
 func (acc *Account) Subscription() *stripe.Sub {
 	if acc.Customer == nil {
 		return nil
-	}
-	subs := acc.Customer.Subs.Values
-
-	if len(subs) == 0 {
+	} else if subs := acc.Customer.Subs.Values; len(subs) == 0 {
 		return nil
+	} else {
+		return subs[0]
 	}
-
-	return subs[0]
 }
 
 // Implements the `Key` method of the `Storable` interface
@@ -49,13 +52,31 @@ func (acc *Account) Serialize() ([]byte, error) {
 func (acc *Account) CreateCustomer() error {
 	params := &stripe.CustomerParams{
 		Email: acc.Email,
-		Plan:  PlanYearly,
 	}
 
 	var err error
 	acc.Customer, err = customer.New(params)
 
 	return err
+}
+
+func (acc *Account) CreateSubscription() error {
+	if acc.Customer == nil {
+		if err := acc.CreateCustomer(); err != nil {
+			return err
+		}
+	}
+
+	if s, err := sub.New(&stripe.SubParams{
+		Customer: acc.Customer.ID,
+		Plan:     ChoosePlan(),
+	}); err != nil {
+		return err
+	} else {
+		acc.Customer.Subs.Values = []*stripe.Sub{s}
+	}
+
+	return nil
 }
 
 func (acc *Account) SetPaymentSource(token string) error {
@@ -98,7 +119,7 @@ func NewAccount(email string) (*Account, error) {
 		Created: time.Now(),
 	}
 
-	if err := acc.CreateCustomer(); err != nil {
+	if err := acc.CreateSubscription(); err != nil {
 		return nil, err
 	}
 
@@ -121,4 +142,17 @@ func AccountFromEmail(email string, create bool, storage pc.Storage) (*Account, 
 		}
 	}
 	return acc, nil
+}
+
+func EnsureSubscription(acc *Account, store pc.Storage) (*stripe.Sub, error) {
+	if acc.Subscription() == nil {
+		if err := acc.CreateSubscription(); err != nil {
+			return nil, err
+		}
+		if err := store.Put(acc); err != nil {
+			return acc.Subscription(), err
+		}
+	}
+
+	return acc.Subscription(), nil
 }

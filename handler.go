@@ -26,8 +26,11 @@ func (h *Dashboard) Handle(w http.ResponseWriter, r *http.Request, auth *pc.Auth
 	accMap := acc.ToMap()
 	accMap["trackingID"] = subAcc.TrackingID
 
-	if sub := subAcc.Subscription(); sub != nil {
+	if sub, err := EnsureSubscription(subAcc, h.Storage); err != nil {
+		return err
+	} else {
 		accMap["subscription"] = map[string]interface{}{
+			"plan":     sub.Plan,
 			"status":   sub.Status,
 			"trialEnd": sub.TrialEnd,
 		}
@@ -104,32 +107,23 @@ func (h *Subscribe) Handle(w http.ResponseWriter, r *http.Request, a *pc.AuthTok
 		return err
 	}
 
+	newSubscription := !acc.HasActiveSubscription()
+
 	if err := acc.SetPaymentSource(token); err != nil {
 		return wrapCardError(err)
 	}
 
-	newSubscription := !acc.HasActiveSubscription()
+	s, err := EnsureSubscription(acc, h.Storage)
+	if err != nil {
+		return err
+	}
 
-	s := acc.Subscription()
-	if s == nil {
-		var err error
-		if s, err = sub.New(&stripe.SubParams{
-			Customer:    acc.Customer.ID,
-			Plan:        PlanYearly,
-			TrialEndNow: true,
-		}); err != nil {
-			return wrapCardError(err)
-		}
-		acc.Customer.Subs.Values = []*stripe.Sub{s}
+	if s_, err := sub.Update(s.ID, &stripe.SubParams{
+		TrialEndNow: true,
+	}); err != nil {
+		return wrapCardError(err)
 	} else {
-		if s_, err := sub.Update(s.ID, &stripe.SubParams{
-			Plan:        PlanYearly,
-			TrialEndNow: true,
-		}); err != nil {
-			return wrapCardError(err)
-		} else {
-			*s = *s_
-		}
+		*s = *s_
 	}
 
 	if err := h.Storage.Put(acc); err != nil {
@@ -153,7 +147,7 @@ func (h *Subscribe) Handle(w http.ResponseWriter, r *http.Request, a *pc.AuthTok
 	go h.Track(&TrackingEvent{
 		Name: eventName,
 		Properties: map[string]interface{}{
-			"Plan":   PlanYearly,
+			"Plan":   s.Plan.ID,
 			"Source": sourceFromRef(r.URL.Query().Get("ref")),
 		},
 	}, r, a)
@@ -193,9 +187,6 @@ func (h *Unsubscribe) Handle(w http.ResponseWriter, r *http.Request, a *pc.AuthT
 
 	go h.Track(&TrackingEvent{
 		Name: "Cancel Subscription",
-		Properties: map[string]interface{}{
-			"Plan": PlanYearly,
-		},
 	}, r, a)
 
 	return nil

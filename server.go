@@ -1,8 +1,10 @@
 package main
 
 import (
+	"errors"
 	pc "github.com/maklesoft/padlock-cloud/padlockcloud"
 	"github.com/stripe/stripe-go"
+	"github.com/stripe/stripe-go/plan"
 )
 
 type StripeConfig struct {
@@ -85,6 +87,18 @@ func (server *Server) Init() error {
 	// }
 
 	stripe.Key = server.StripeConfig.SecretKey
+
+	i := plan.List(nil)
+	for i.Next() {
+		plan := i.Plan()
+		if plan.Meta["available"] == "true" {
+			AvailablePlans = append(AvailablePlans, i.Plan())
+		}
+	}
+
+	if len(AvailablePlans) == 0 {
+		return errors.New("No available plans found!")
+	}
 
 	// Set up tracking
 	server.Tracker = NewMixpanelTracker(server.MixpanelConfig.Token, server.Storage)
