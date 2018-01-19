@@ -55,6 +55,13 @@ func (server *Server) InitEndpoints() {
 		AuthType: "web",
 	}
 
+	server.Server.Endpoints["/billing/"] = &pc.Endpoint{
+		Handlers: map[string]pc.Handler{
+			"POST": &UpdateBilling{server},
+		},
+		AuthType: "web",
+	}
+
 	server.Server.Endpoints["/stripehook/"] = &pc.Endpoint{
 		Handlers: map[string]pc.Handler{
 			"POST": &StripeHook{server},

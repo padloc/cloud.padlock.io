@@ -36,13 +36,42 @@ func (h *Dashboard) Handle(w http.ResponseWriter, r *http.Request, auth *pc.Auth
 		}
 	}
 
-	if len(subAcc.Customer.Sources.Values) != 0 {
-		source := subAcc.Customer.Sources.Values[0]
+	customer := subAcc.Customer
+
+	var card *stripe.Card
+	if len(customer.Sources.Values) != 0 && customer.Sources.Values[0].Card != nil {
+		card = customer.Sources.Values[0].Card
 		accMap["paymentSource"] = map[string]string{
-			"brand":    string(source.Card.Brand),
-			"lastFour": source.Card.LastFour,
+			"brand":    string(card.Brand),
+			"lastFour": card.LastFour,
 		}
 	}
+
+	billing := map[string]string{
+		"vat": customer.BusinessVatID,
+	}
+
+	if customer.Shipping != nil {
+		billing["name"] = customer.Shipping.Name
+		billing["address1"] = customer.Shipping.Address.Line1
+		billing["address2"] = customer.Shipping.Address.Line2
+		billing["postalCode"] = customer.Shipping.Address.Zip
+		billing["city"] = customer.Shipping.Address.City
+		billing["country"] = customer.Shipping.Address.Country
+	} else if card != nil {
+		billing["name"] = card.Name
+		billing["address1"] = card.Address1
+		billing["address2"] = card.Address2
+		billing["postalCode"] = card.Zip
+		billing["city"] = card.City
+		if card.Country != "" {
+			billing["country"] = card.Country
+		} else {
+			billing["country"] = card.CardCountry
+		}
+	}
+
+	accMap["billing"] = billing
 
 	accMap["displaySubscription"] = !NoSubRequired(auth)
 
@@ -189,6 +218,69 @@ func (h *Unsubscribe) Handle(w http.ResponseWriter, r *http.Request, a *pc.AuthT
 		Name: "Cancel Subscription",
 	}, r, a)
 
+	return nil
+}
+
+type UpdateBilling struct {
+	*Server
+}
+
+func (h *UpdateBilling) Handle(w http.ResponseWriter, r *http.Request, a *pc.AuthToken) error {
+	if a == nil {
+		return &pc.InvalidAuthToken{}
+	}
+
+	acc, err := h.AccountFromEmail(a.Account().Email, true)
+	if err != nil {
+		return err
+	}
+
+	params := &stripe.CustomerParams{
+		Shipping: &stripe.CustomerShippingDetails{
+			Name: r.PostFormValue("name"),
+			Address: stripe.Address{
+				Line1:   r.PostFormValue("address1"),
+				Line2:   r.PostFormValue("address2"),
+				Zip:     r.PostFormValue("zip"),
+				City:    r.PostFormValue("city"),
+				Country: r.PostFormValue("country"),
+			},
+		},
+		BusinessVatID: r.PostFormValue("vat"),
+	}
+
+	if customer, err := customer.Update(acc.Customer.ID, params); err != nil {
+		return err
+	} else {
+		acc.Customer = customer
+	}
+
+	if err := h.Storage.Put(acc); err != nil {
+		return err
+	}
+	//
+	// var eventName string
+	// var action string
+	// if newSubscription {
+	// 	eventName = "Buy Subscription"
+	// 	action = "subscribed"
+	// } else {
+	// 	eventName = "Update Payment Method"
+	// 	action = "payment-updated"
+	// }
+	//
+	http.Redirect(w, r, "/dashboard/?action=billing-updated", http.StatusFound)
+
+	h.Info.Printf("%s - update billing - %s\n", pc.FormatRequest(r), acc.Email)
+	//
+	// go h.Track(&TrackingEvent{
+	// 	Name: eventName,
+	// 	Properties: map[string]interface{}{
+	// 		"Plan":   s.Plan.ID,
+	// 		"Source": sourceFromRef(r.URL.Query().Get("ref")),
+	// 	},
+	// }, r, a)
+	//
 	return nil
 }
 
