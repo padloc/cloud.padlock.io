@@ -3,6 +3,10 @@
 	"ignore": "test",
 	"package": [
 		{
+			"path": "gihub.com/stripe/stripe-go/invoices",
+			"revision": ""
+		},
+		{
 			"checksumSHA1": "c5kuw8JpAPTGfXAxp6vTmRlK8do=",
 			"path": "github.com/dukex/mixpanel",
 			"revision": "53bfdf679eecb9731ac23f01a89d8a6904f09037",
@@ -57,10 +61,10 @@
 			"revisionTime": "2017-04-16T16:04:56Z"
 		},
 		{
-			"checksumSHA1": "eRzCUUrd7tr1etQYJAuHmMwAwio=",
+			"checksumSHA1": "Eo3SAb8OtmbPOMlDTceov/edoW4=",
 			"path": "github.com/maklesoft/padlock-cloud/padlockcloud",
-			"revision": "ac3121988cee8845a5985427b2f008eb87089989",
-			"revisionTime": "2017-11-24T15:08:39Z"
+			"revision": "322ddc0bdb9aeb6c64ad0f755d0b9387d4b660ee",
+			"revisionTime": "2018-01-15T13:47:54Z"
 		},
 		{
 			"checksumSHA1": "Hky3u+8Rqum+wB5BHMj0A8ZmT4g=",
@@ -106,6 +110,12 @@
 			"path": "github.com/stripe/stripe-go/form",
 			"revision": "4215bb4be39f20597ef7733989e9096869ad830c",
 			"revisionTime": "2018-01-09T21:04:56Z"
+		},
+		{
+			"checksumSHA1": "TM3OgzQJ5m6tpEd98YfyWvQ4LHA=",
+			"path": "github.com/stripe/stripe-go/invoice",
+			"revision": "918a5726870d136e7dd8d973d46922b0bd07192d",
+			"revisionTime": "2018-01-18T17:57:40Z"
 		},
 		{
 			"checksumSHA1": "y5AD80EvDutFqGuAYsBtcya6ntM=",

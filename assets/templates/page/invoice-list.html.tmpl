@@ -1,0 +1,31 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Padlock Cloud Invoices</title>
+    <style>
+        body {
+            font-family: sans-serif;
+        }
+
+        ul {
+            list
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <h1>Invoices for {{ .customer.Email }}</h1>
+        <ul>
+            {{ range .invoices }}
+                <li>
+                    <a href="/invoices/{{ .ID }}">
+                        {{ with index .Lines.Values 0 }}
+                            {{ .Plan.Name }} ({{ formatTimeStamp .Period.Start }} - {{ formatTimeStamp .Period.End }})
+                        {{ end }}
+                    </a>
+                </li>
+            {{ end }}
+        </ul>
+    </main>
+</body>

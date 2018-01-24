@@ -7,9 +7,11 @@ import (
 	pc "github.com/maklesoft/padlock-cloud/padlockcloud"
 	"github.com/stripe/stripe-go"
 	"github.com/stripe/stripe-go/customer"
+	"github.com/stripe/stripe-go/invoice"
 	"github.com/stripe/stripe-go/sub"
 	"io/ioutil"
 	"net/http"
+	"strings"
 )
 
 type Dashboard struct {
@@ -362,6 +364,76 @@ func (h *Track) Handle(w http.ResponseWriter, r *http.Request, a *pc.AuthToken) 
 
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(response)
+
+	return nil
+}
+
+type Invoices struct {
+	*Server
+}
+
+func (h *Invoices) Handle(w http.ResponseWriter, r *http.Request, a *pc.AuthToken) error {
+	acc, err := h.AccountFromEmail(a.Account().Email, true)
+	if err != nil {
+		return err
+	}
+
+	var id string
+	if p := strings.Split(r.URL.Path, "/"); len(p) > 2 {
+		id = p[2]
+	}
+
+	if id != "" {
+
+		inv, err := invoice.Get(id, nil)
+		if err != nil {
+			return err
+		}
+
+		if inv.Customer.ID != acc.Customer.ID {
+			return &pc.UnauthorizedError{}
+		}
+
+		var b bytes.Buffer
+		if err := h.Templates.Invoice.Execute(&b, &map[string]interface{}{
+			"invoice":  inv,
+			"customer": acc.Customer,
+		}); err != nil {
+			return err
+		}
+
+		b.WriteTo(w)
+
+	} else {
+
+		var invoices []*stripe.Invoice
+		i := invoice.List(&stripe.InvoiceListParams{
+			Customer: acc.Customer.ID,
+		})
+		for i.Next() {
+			invoices = append(invoices, i.Invoice())
+		}
+
+		if r.Header.Get("Accept") == "application/json" {
+			if b, err := json.Marshal(invoices); err != nil {
+				return err
+			} else {
+				w.Header().Set("Content-Type", "application/json")
+				w.Write(b)
+			}
+		} else {
+			var b bytes.Buffer
+			if err := h.Templates.InvoiceList.Execute(&b, &map[string]interface{}{
+				"invoices": invoices,
+				"customer": acc.Customer,
+			}); err != nil {
+				return err
+			}
+
+			b.WriteTo(w)
+		}
+
+	}
 
 	return nil
 }
