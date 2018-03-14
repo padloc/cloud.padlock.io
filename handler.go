@@ -437,3 +437,71 @@ func (h *Invoices) Handle(w http.ResponseWriter, r *http.Request, a *pc.AuthToke
 
 	return nil
 }
+
+type SetPaymentSource struct {
+	*Server
+}
+
+func (h *SetPaymentSource) Handle(w http.ResponseWriter, r *http.Request, a *pc.AuthToken) error {
+	if a == nil {
+		return &pc.InvalidAuthToken{}
+	}
+
+	token := r.PostFormValue("stripeToken")
+
+	if token == "" {
+		return &pc.BadRequest{"No stripe token provided"}
+	}
+
+	acc, err := h.AccountFromEmail(a.Account().Email, true)
+	if err != nil {
+		return err
+	}
+
+	updating := acc.GetPaymentSource() != nil
+
+	if err := acc.SetPaymentSource(token); err != nil {
+		e := wrapCardError(err)
+		go h.Track(&TrackingEvent{
+			Name: "Set Payment Method",
+			Properties: map[string]interface{}{
+				"Source":   sourceFromRef(r.URL.Query().Get("ref")),
+				"Updating": updating,
+				"Error":    e.Error(),
+			},
+		}, r, a)
+		return e
+	}
+
+	if err := h.Storage.Put(acc); err != nil {
+		return err
+	}
+
+	h.Info.Printf("%s - payment_source:set - %s\n", pc.FormatRequest(r), acc.Email)
+
+	go h.Track(&TrackingEvent{
+		Name: "Set Payment Method",
+		Properties: map[string]interface{}{
+			"Source":   sourceFromRef(r.URL.Query().Get("ref")),
+			"Updating": updating,
+		},
+	}, r, a)
+
+	return nil
+}
+
+type Plans struct {
+	*Server
+}
+
+func (h *Plans) Handle(w http.ResponseWriter, r *http.Request, auth *pc.AuthToken) error {
+	res, err := json.Marshal(AvailablePlans)
+	if err != nil {
+		return err
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(res)
+
+	return nil
+}
