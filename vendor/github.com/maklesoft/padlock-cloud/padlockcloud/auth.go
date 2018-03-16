@@ -273,17 +273,24 @@ func (a *Account) AuthTokensByType(typ string) []*AuthToken {
 	return tokens
 }
 
+func (a *Account) Devices() []*AuthToken {
+	devices := make([]*AuthToken, 0)
+	for _, at := range a.AuthTokensByType("api") {
+		if !at.Expired() {
+			devices = append(devices, at)
+		}
+	}
+	return devices
+}
+
 func (a *Account) ToMap() map[string]interface{} {
 	obj := map[string]interface{}{
 		"email": a.Email,
 	}
 
 	devices := make([]map[string]interface{}, 0)
-
-	for _, at := range a.AuthTokensByType("api") {
-		if !at.Expired() {
-			devices = append(devices, at.ToMap())
-		}
+	for _, at := range a.Devices() {
+		devices = append(devices, at.ToMap())
 	}
 
 	obj["devices"] = devices
@@ -293,6 +300,7 @@ func (a *Account) ToMap() map[string]interface{} {
 // AuthRequest represents an api key - activation token pair used to activate a given api key
 // `AuthRequest.Token` is used to activate the AuthToken through a separate channel (e.g. email)
 type AuthRequest struct {
+	Code      string
 	Token     string
 	AuthToken *AuthToken
 	Created   time.Time
@@ -301,7 +309,11 @@ type AuthRequest struct {
 
 // Implementation of the `Storable.Key` interface method
 func (ar *AuthRequest) Key() []byte {
-	return []byte(ar.Token)
+	if ar.Token != "" {
+		return []byte(ar.Token)
+	} else {
+		return []byte(fmt.Sprintf("%s-%s", ar.AuthToken.Email, ar.Code))
+	}
 }
 
 // Implementation of the `Storable.Deserialize` method
@@ -315,20 +327,32 @@ func (ar *AuthRequest) Serialize() ([]byte, error) {
 }
 
 // Creates a new `AuthRequest` with a given `email`
-func NewAuthRequest(email string, tType string, device *Device) (*AuthRequest, error) {
+func NewAuthRequest(email string, tType string, actType string, device *Device) (*AuthRequest, error) {
+	var authToken *AuthToken
+	var err error
+
 	// Create new auth token
-	authToken, err := NewAuthToken(email, tType, device)
+	if authToken, err = NewAuthToken(email, tType, device); err != nil {
+		return nil, err
+	}
+
+	ar := &AuthRequest{
+		AuthToken: authToken,
+		Created:   time.Now(),
+		Redirect:  "",
+	}
+
+	if actType == "code" {
+		ar.Code, err = randomHex(3)
+	} else {
+		ar.Token, err = token()
+	}
+
 	if err != nil {
 		return nil, err
 	}
 
-	// Create activation token
-	actToken, err := token()
-	if err != nil {
-		return nil, err
-	}
-
-	return &AuthRequest{actToken, authToken, time.Now(), ""}, nil
+	return ar, nil
 }
 
 func init() {

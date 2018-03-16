@@ -25,56 +25,11 @@ func (h *Dashboard) Handle(w http.ResponseWriter, r *http.Request, auth *pc.Auth
 		return err
 	}
 
-	accMap := acc.ToMap()
-	accMap["trackingID"] = subAcc.TrackingID
-
-	if sub, err := EnsureSubscription(subAcc, h.Storage); err != nil {
+	if _, err := EnsureSubscription(subAcc, h.Storage); err != nil {
 		return err
-	} else {
-		accMap["subscription"] = map[string]interface{}{
-			"plan":     sub.Plan,
-			"status":   sub.Status,
-			"trialEnd": sub.TrialEnd,
-		}
 	}
 
-	customer := subAcc.Customer
-
-	var card *stripe.Card
-	if len(customer.Sources.Values) != 0 && customer.Sources.Values[0].Card != nil {
-		card = customer.Sources.Values[0].Card
-		accMap["paymentSource"] = map[string]string{
-			"brand":    string(card.Brand),
-			"lastFour": card.LastFour,
-		}
-	}
-
-	billing := map[string]string{
-		"vat": customer.BusinessVatID,
-	}
-
-	if customer.Shipping != nil {
-		billing["name"] = customer.Shipping.Name
-		billing["address1"] = customer.Shipping.Address.Line1
-		billing["address2"] = customer.Shipping.Address.Line2
-		billing["postalCode"] = customer.Shipping.Address.Zip
-		billing["city"] = customer.Shipping.Address.City
-		billing["country"] = customer.Shipping.Address.Country
-	} else if card != nil {
-		billing["name"] = card.Name
-		billing["address1"] = card.Address1
-		billing["address2"] = card.Address2
-		billing["postalCode"] = card.Zip
-		billing["city"] = card.City
-		if card.Country != "" {
-			billing["country"] = card.Country
-		} else {
-			billing["country"] = card.CardCountry
-		}
-	}
-
-	accMap["billing"] = billing
-
+	accMap := subAcc.ToMap(acc)
 	accMap["displaySubscription"] = !NoSubRequired(auth)
 
 	params := pc.DashboardParams(r, auth)
@@ -486,6 +441,28 @@ func (h *SetPaymentSource) Handle(w http.ResponseWriter, r *http.Request, a *pc.
 			"Updating": updating,
 		},
 	}, r, a)
+
+	return nil
+}
+
+type AccountInfo struct {
+	*Server
+}
+
+func (h *AccountInfo) Handle(w http.ResponseWriter, r *http.Request, auth *pc.AuthToken) error {
+	acc := auth.Account()
+	subAcc, err := h.AccountFromEmail(acc.Email, true)
+	if err != nil {
+		return err
+	}
+
+	res, err := json.Marshal(subAcc.ToMap(acc))
+	if err != nil {
+		return err
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(res)
 
 	return nil
 }

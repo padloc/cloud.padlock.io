@@ -79,6 +79,14 @@ func (acc *Account) CreateSubscription() error {
 	return nil
 }
 
+func (acc *Account) GetPaymentSource() *stripe.PaymentSource {
+	if acc.Customer == nil {
+		return nil
+	}
+
+	return acc.Customer.DefaultSource
+}
+
 func (acc *Account) SetPaymentSource(token string) error {
 	params := &stripe.CustomerParams{}
 	params.SetSource(token)
@@ -111,6 +119,58 @@ func (acc *Account) RemainingTrialPeriod() time.Duration {
 
 func (acc *Account) RemainingTrialDays() int {
 	return int(acc.RemainingTrialPeriod().Hours()/24) + 1
+}
+
+func (subAcc *Account) ToMap(acc *pc.Account) map[string]interface{} {
+	accMap := acc.ToMap()
+	accMap["trackingID"] = subAcc.TrackingID
+
+	if sub := subAcc.Subscription(); sub != nil {
+		accMap["subscription"] = map[string]interface{}{
+			"plan":     sub.Plan,
+			"status":   sub.Status,
+			"trialEnd": sub.TrialEnd,
+		}
+	}
+
+	customer := subAcc.Customer
+
+	var card *stripe.Card
+	if len(customer.Sources.Values) != 0 && customer.Sources.Values[0].Card != nil {
+		card = customer.Sources.Values[0].Card
+		accMap["paymentSource"] = map[string]string{
+			"brand":    string(card.Brand),
+			"lastFour": card.LastFour,
+		}
+	}
+
+	billing := map[string]string{
+		"vat": customer.BusinessVatID,
+	}
+
+	if customer.Shipping != nil {
+		billing["name"] = customer.Shipping.Name
+		billing["address1"] = customer.Shipping.Address.Line1
+		billing["address2"] = customer.Shipping.Address.Line2
+		billing["postalCode"] = customer.Shipping.Address.Zip
+		billing["city"] = customer.Shipping.Address.City
+		billing["country"] = customer.Shipping.Address.Country
+	} else if card != nil {
+		billing["name"] = card.Name
+		billing["address1"] = card.Address1
+		billing["address2"] = card.Address2
+		billing["postalCode"] = card.Zip
+		billing["city"] = card.City
+		if card.Country != "" {
+			billing["country"] = card.Country
+		} else {
+			billing["country"] = card.CardCountry
+		}
+	}
+
+	accMap["billing"] = billing
+
+	return accMap
 }
 
 func NewAccount(email string) (*Account, error) {

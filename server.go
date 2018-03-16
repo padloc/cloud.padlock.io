@@ -87,6 +87,13 @@ func (server *Server) InitEndpoints() {
 			"GET": &Plans{server},
 		},
 	}
+
+	server.Server.Endpoints["/account/"] = &pc.Endpoint{
+		Handlers: map[string]pc.Handler{
+			"GET": &AccountInfo{server},
+		},
+		AuthType: "api",
+	}
 }
 
 func (server *Server) Init() error {
