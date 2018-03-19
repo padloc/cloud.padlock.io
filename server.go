@@ -30,10 +30,6 @@ func (server *Server) AccountFromEmail(email string, create bool) (*Account, err
 }
 
 func (server *Server) InitEndpoints() {
-	auth := server.Endpoints["/auth/"]
-	auth.Handlers["PUT"] = (&CheckSubscription{server, false}).Wrap(auth.Handlers["PUT"])
-	auth.Handlers["POST"] = (&CheckSubscription{server, false}).Wrap(auth.Handlers["POST"])
-
 	store := server.Endpoints["/store/"]
 	store.Handlers["GET"] = (&CheckSubscription{server, false}).Wrap(store.Handlers["GET"])
 	store.Handlers["HEAD"] = (&CheckSubscription{server, false}).Wrap(store.Handlers["HEAD"])
@@ -46,14 +42,14 @@ func (server *Server) InitEndpoints() {
 		Handlers: map[string]pc.Handler{
 			"POST": &Subscribe{server},
 		},
-		// AuthType: "web",
+		AuthType: "universal",
 	}
 
 	server.Server.Endpoints["/unsubscribe/"] = &pc.Endpoint{
 		Handlers: map[string]pc.Handler{
 			"POST": &Unsubscribe{server},
 		},
-		AuthType: "web",
+		AuthType: "universal",
 	}
 
 	server.Server.Endpoints["/billing/"] = &pc.Endpoint{
@@ -90,7 +86,7 @@ func (server *Server) InitEndpoints() {
 
 	server.Server.Endpoints["/account/"] = &pc.Endpoint{
 		Handlers: map[string]pc.Handler{
-			"GET": &AccountInfo{server},
+			"GET": (&CheckSubscription{server, false}).Wrap(&AccountInfo{server}),
 		},
 		AuthType: "api",
 	}

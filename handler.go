@@ -25,10 +25,6 @@ func (h *Dashboard) Handle(w http.ResponseWriter, r *http.Request, auth *pc.Auth
 		return err
 	}
 
-	if _, err := EnsureSubscription(subAcc, h.Storage); err != nil {
-		return err
-	}
-
 	accMap := subAcc.ToMap(acc)
 	accMap["displaySubscription"] = !NoSubRequired(auth)
 
@@ -70,7 +66,7 @@ type Subscribe struct {
 func wrapCardError(err error) error {
 	// For now, card errors are the only errors we are expecting from stripe. Any other
 	// errors we treat as unexpected errors (i.e. ServerError)
-	if stripeErr, ok := err.(*stripe.Error); ok && stripeErr.Type == stripe.ErrorTypeCard {
+	if stripeErr, ok := err.(*stripe.Error); ok {
 		return &StripeError{stripeErr}
 	} else {
 		return err
@@ -83,9 +79,12 @@ func (h *Subscribe) Handle(w http.ResponseWriter, r *http.Request, a *pc.AuthTok
 	}
 
 	token := r.PostFormValue("stripeToken")
+	coupon := r.PostFormValue("coupon")
+	source := r.PostFormValue("source")
+	plan := AvailablePlans[0].ID
 
-	if token == "" {
-		return &pc.BadRequest{"No stripe token provided"}
+	if source == "" {
+		source = sourceFromRef(r.URL.Query().Get("ref"))
 	}
 
 	acc, err := h.AccountFromEmail(a.Account().Email, true)
@@ -93,48 +92,91 @@ func (h *Subscribe) Handle(w http.ResponseWriter, r *http.Request, a *pc.AuthTok
 		return err
 	}
 
-	newSubscription := !acc.HasActiveSubscription()
-
-	if err := acc.SetPaymentSource(token); err != nil {
-		return wrapCardError(err)
-	}
-
-	s, err := EnsureSubscription(acc, h.Storage)
-	if err != nil {
+	if err := acc.UpdateCustomer(h.Storage); err != nil {
 		return err
 	}
 
-	if s_, err := sub.Update(s.ID, &stripe.SubParams{
-		TrialEndNow: true,
-	}); err != nil {
-		return wrapCardError(err)
+	if acc.GetPaymentSource() == nil && token == "" {
+		return &pc.BadRequest{"No existing payment source and no stripe token provided"}
+	}
+
+	hadSub := acc.HasActiveSubscription()
+	hadSource := acc.GetPaymentSource() != nil
+	prevStatus, _ := acc.SubscriptionStatus()
+	prevPlan := ""
+
+	if sub := acc.Subscription(); sub != nil {
+		prevPlan = sub.Plan.ID
+	}
+
+	if token != "" {
+		if err := acc.SetPaymentSource(token); err != nil {
+			return wrapCardError(err)
+		}
+	}
+
+	s := acc.Subscription()
+	if s == nil {
+		var err error
+		if s, err = sub.New(&stripe.SubParams{
+			Customer:    acc.Customer.ID,
+			Plan:        plan,
+			TrialEndNow: true,
+			Coupon:      coupon,
+		}); err != nil {
+			return wrapCardError(err)
+		}
+		acc.Customer.Subs.Values = []*stripe.Sub{s}
 	} else {
-		*s = *s_
+		if s_, err := sub.Update(s.ID, &stripe.SubParams{
+			Plan:        plan,
+			TrialEndNow: true,
+			Coupon:      coupon,
+		}); err != nil {
+			return wrapCardError(err)
+		} else {
+			*s = *s_
+		}
 	}
 
 	if err := h.Storage.Put(acc); err != nil {
 		return err
 	}
 
-	var eventName string
-	var action string
-	if newSubscription {
-		eventName = "Buy Subscription"
-		action = "subscribed"
-	} else {
-		eventName = "Update Payment Method"
-		action = "payment-updated"
+	if s.Status == "unpaid" || s.Status == "past_due" {
+		// Attempt to pay any unpaid invoices
+		i := invoice.List(&stripe.InvoiceListParams{
+			Sub: s.ID,
+		})
+		for i.Next() {
+			inv := i.Invoice()
+			if inv.Attempted && !inv.Paid {
+				if _, err := invoice.Pay(inv.ID, nil); err != nil {
+					return wrapCardError(err)
+				}
+			}
+		}
 	}
 
-	http.Redirect(w, r, "/dashboard/?action="+action, http.StatusFound)
+	if strings.Contains(r.Header.Get("Accept"), "text/html") {
+		action := "subscribed"
+		if hadSub {
+			action = "payment-updated"
+		}
+		http.Redirect(w, r, "/dashboard/?action="+action, http.StatusFound)
+	}
 
-	h.Info.Printf("%s - subcribe - %s\n", pc.FormatRequest(r), acc.Email)
+	h.Info.Printf("%s - subscribe - %s\n", pc.FormatRequest(r), acc.Email)
 
 	go h.Track(&TrackingEvent{
-		Name: eventName,
+		Name: "Update Subscription",
 		Properties: map[string]interface{}{
-			"Plan":   s.Plan.ID,
-			"Source": sourceFromRef(r.URL.Query().Get("ref")),
+			"Plan":                    plan,
+			"Source":                  source,
+			"Previous Status":         prevStatus,
+			"Previous Plan":           prevPlan,
+			"Had Payment Source":      hadSource,
+			"Updating Payment Source": token != "",
 		},
 	}, r, a)
 
@@ -148,6 +190,10 @@ type Unsubscribe struct {
 func (h *Unsubscribe) Handle(w http.ResponseWriter, r *http.Request, a *pc.AuthToken) error {
 	acc, err := h.AccountFromEmail(a.Account().Email, true)
 	if err != nil {
+		return err
+	}
+
+	if err := acc.UpdateCustomer(h.Storage); err != nil {
 		return err
 	}
 
@@ -167,7 +213,9 @@ func (h *Unsubscribe) Handle(w http.ResponseWriter, r *http.Request, a *pc.AuthT
 		return err
 	}
 
-	http.Redirect(w, r, "/dashboard/?action=unsubscribed", http.StatusFound)
+	if strings.Contains(r.Header.Get("Accept"), "text/html") {
+		http.Redirect(w, r, "/dashboard/?action=unsubscribed", http.StatusFound)
+	}
 
 	h.Info.Printf("%s - unsubscribe - %s\n", pc.FormatRequest(r), acc.Email)
 
@@ -366,7 +414,10 @@ func (h *Invoices) Handle(w http.ResponseWriter, r *http.Request, a *pc.AuthToke
 			Customer: acc.Customer.ID,
 		})
 		for i.Next() {
-			invoices = append(invoices, i.Invoice())
+			inv := i.Invoice()
+			if inv.Paid {
+				invoices = append(invoices, inv)
+			}
 		}
 
 		if r.Header.Get("Accept") == "application/json" {

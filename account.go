@@ -60,6 +60,23 @@ func (acc *Account) CreateCustomer() error {
 	return err
 }
 
+func (acc *Account) UpdateCustomer(storage pc.Storage) error {
+	if acc.Customer == nil {
+		return nil
+	}
+
+	var err error
+	if acc.Customer, err = customer.Get(acc.Customer.ID, nil); err != nil {
+		return err
+	}
+
+	if err := storage.Put(acc); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (acc *Account) CreateSubscription() error {
 	if acc.Customer == nil {
 		if err := acc.CreateCustomer(); err != nil {
@@ -101,6 +118,25 @@ func (acc *Account) HasActiveSubscription() bool {
 	return sub != nil && sub.Status == "active"
 }
 
+func (acc *Account) SubscriptionStatus() (string, int64) {
+	status := ""
+	hasPaymentSource := acc.GetPaymentSource() != nil
+	var trialEnd int64 = 0
+
+	if s := acc.Subscription(); s != nil {
+		status = string(s.Status)
+		trialEnd = s.TrialEnd
+	} else if hasPaymentSource {
+		status = "canceled"
+	}
+
+	if (status == "past_due" || status == "unpaid") && !hasPaymentSource {
+		status = "trial_expired"
+	}
+
+	return status, trialEnd
+}
+
 func (acc *Account) RemainingTrialPeriod() time.Duration {
 	sub := acc.Subscription()
 
@@ -125,13 +161,13 @@ func (subAcc *Account) ToMap(acc *pc.Account) map[string]interface{} {
 	accMap := acc.ToMap()
 	accMap["trackingID"] = subAcc.TrackingID
 
-	if sub := subAcc.Subscription(); sub != nil {
-		accMap["subscription"] = map[string]interface{}{
-			"plan":     sub.Plan,
-			"status":   sub.Status,
-			"trialEnd": sub.TrialEnd,
-		}
+	subStatus, trialEnd := subAcc.SubscriptionStatus()
+	accMap["subscription"] = map[string]interface{}{
+		"status":   subStatus,
+		"trialEnd": trialEnd,
 	}
+
+	accMap["plan"] = AvailablePlans[0]
 
 	customer := subAcc.Customer
 
@@ -202,17 +238,4 @@ func AccountFromEmail(email string, create bool, storage pc.Storage) (*Account, 
 		}
 	}
 	return acc, nil
-}
-
-func EnsureSubscription(acc *Account, store pc.Storage) (*stripe.Sub, error) {
-	if acc.Subscription() == nil {
-		if err := acc.CreateSubscription(); err != nil {
-			return nil, err
-		}
-		if err := store.Put(acc); err != nil {
-			return acc.Subscription(), err
-		}
-	}
-
-	return acc.Subscription(), nil
 }
