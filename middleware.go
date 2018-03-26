@@ -57,6 +57,7 @@ func (m *CheckSubscription) Wrap(h pc.Handler) pc.Handler {
 
 		w.Header().Set("X-Sub-Status", status)
 		w.Header().Set("X-Sub-Trial-End", strconv.FormatInt(trialEnd, 10))
+		w.Header().Set("X-Stripe-Pub-Key", m.StripeConfig.PublicKey)
 
 		if m.RequireSub && status != "trialing" && status != "active" {
 			return &SubscriptionRequired{}

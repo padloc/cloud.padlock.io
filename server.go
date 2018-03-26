@@ -80,7 +80,7 @@ func (server *Server) InitEndpoints() {
 
 	server.Server.Endpoints["/plans/"] = &pc.Endpoint{
 		Handlers: map[string]pc.Handler{
-			"GET": &Plans{server},
+			"GET": (&CheckSubscription{server, false}).Wrap(&Plans{server}),
 		},
 	}
 
