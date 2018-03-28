@@ -6,6 +6,7 @@ import (
 	"fmt"
 	pc "github.com/maklesoft/padlock-cloud/padlockcloud"
 	"github.com/stripe/stripe-go"
+	"github.com/stripe/stripe-go/coupon"
 	"github.com/stripe/stripe-go/customer"
 	"github.com/stripe/stripe-go/invoice"
 	"github.com/stripe/stripe-go/sub"
@@ -27,6 +28,13 @@ func (h *Dashboard) Handle(w http.ResponseWriter, r *http.Request, auth *pc.Auth
 
 	accMap := subAcc.ToMap(acc)
 	accMap["displaySubscription"] = !NoSubRequired(auth)
+
+	couponCode := r.URL.Query().Get("coupon")
+	if couponCode != "" {
+		if coupon, err := coupon.Get(couponCode, nil); err == nil {
+			accMap["coupon"] = coupon
+		}
+	}
 
 	params := pc.DashboardParams(r, auth)
 	params["account"] = accMap
