@@ -169,42 +169,42 @@ func (subAcc *Account) ToMap(acc *pc.Account) map[string]interface{} {
 
 	accMap["plan"] = AvailablePlans[0]
 
-	customer := subAcc.Customer
-
-	var card *stripe.Card
-	if len(customer.Sources.Values) != 0 && customer.Sources.Values[0].Card != nil {
-		card = customer.Sources.Values[0].Card
-		accMap["paymentSource"] = map[string]string{
-			"brand":    string(card.Brand),
-			"lastFour": card.LastFour,
+	if customer := subAcc.Customer; customer != nil {
+		var card *stripe.Card
+		if len(customer.Sources.Values) != 0 && customer.Sources.Values[0].Card != nil {
+			card = customer.Sources.Values[0].Card
+			accMap["paymentSource"] = map[string]string{
+				"brand":    string(card.Brand),
+				"lastFour": card.LastFour,
+			}
 		}
-	}
 
-	billing := map[string]string{
-		"vat": customer.BusinessVatID,
-	}
-
-	if customer.Shipping != nil {
-		billing["name"] = customer.Shipping.Name
-		billing["address1"] = customer.Shipping.Address.Line1
-		billing["address2"] = customer.Shipping.Address.Line2
-		billing["postalCode"] = customer.Shipping.Address.Zip
-		billing["city"] = customer.Shipping.Address.City
-		billing["country"] = customer.Shipping.Address.Country
-	} else if card != nil {
-		billing["name"] = card.Name
-		billing["address1"] = card.Address1
-		billing["address2"] = card.Address2
-		billing["postalCode"] = card.Zip
-		billing["city"] = card.City
-		if card.Country != "" {
-			billing["country"] = card.Country
-		} else {
-			billing["country"] = card.CardCountry
+		billing := map[string]string{
+			"vat": customer.BusinessVatID,
 		}
-	}
 
-	accMap["billing"] = billing
+		if customer.Shipping != nil {
+			billing["name"] = customer.Shipping.Name
+			billing["address1"] = customer.Shipping.Address.Line1
+			billing["address2"] = customer.Shipping.Address.Line2
+			billing["postalCode"] = customer.Shipping.Address.Zip
+			billing["city"] = customer.Shipping.Address.City
+			billing["country"] = customer.Shipping.Address.Country
+		} else if card != nil {
+			billing["name"] = card.Name
+			billing["address1"] = card.Address1
+			billing["address2"] = card.Address2
+			billing["postalCode"] = card.Zip
+			billing["city"] = card.City
+			if card.Country != "" {
+				billing["country"] = card.Country
+			} else {
+				billing["country"] = card.CardCountry
+			}
+		}
+
+		accMap["billing"] = billing
+	}
 
 	return accMap
 }
