@@ -179,6 +179,7 @@ func (h *Subscribe) Handle(w http.ResponseWriter, r *http.Request, a *pc.AuthTok
 	go h.Track(&TrackingEvent{
 		Name: "Update Subscription",
 		Properties: map[string]interface{}{
+			"Coupon":                  coupon,
 			"Plan":                    plan,
 			"Source":                  source,
 			"Previous Status":         prevStatus,
