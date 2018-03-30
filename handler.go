@@ -100,8 +100,17 @@ func (h *Subscribe) Handle(w http.ResponseWriter, r *http.Request, a *pc.AuthTok
 		return err
 	}
 
-	if err := acc.UpdateCustomer(h.Storage); err != nil {
-		return err
+	if acc.Customer == nil {
+		if err := acc.CreateCustomer(); err != nil {
+			return err
+		}
+		if err := h.Storage.Put(acc); err != nil {
+			return err
+		}
+	} else {
+		if err := acc.UpdateCustomer(h.Storage); err != nil {
+			return err
+		}
 	}
 
 	if acc.GetPaymentSource() == nil && token == "" {
