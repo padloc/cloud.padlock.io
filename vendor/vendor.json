@@ -61,17 +61,10 @@
 			"revisionTime": "2017-04-16T16:04:56Z"
 		},
 		{
-			"checksumSHA1": "41x8LVPZt+NmKRTAIuza3cTwSjc=",
+			"checksumSHA1": "HGvpnfJNyJu7EF5KdcwRzrVndZ4=",
 			"path": "github.com/maklesoft/padlock-cloud/padlockcloud",
-			"revision": "4fe8566ea68f37c72188d94fdcbf0d9bb0b8c773",
-			"revisionTime": "2018-03-28T04:50:12Z"
-		},
-		{
-			"checksumSHA1": "Hky3u+8Rqum+wB5BHMj0A8ZmT4g=",
-			"origin": "github.com/maklesoft/padlock-cloud/vendor/github.com/pkg/errors",
-			"path": "github.com/pkg/errors",
-			"revision": "e32fc701456b203dca2a5587242e27f292b10f7f",
-			"revisionTime": "2017-04-16T16:04:56Z"
+			"revision": "2f8a5c3446b0b4b90d77cb5dbf60f2c4efc8f08d",
+			"revisionTime": "2018-04-02T17:51:37Z"
 		},
 		{
 			"checksumSHA1": "IAg7PcqaEf/TL1KNqZB0FTEb778=",

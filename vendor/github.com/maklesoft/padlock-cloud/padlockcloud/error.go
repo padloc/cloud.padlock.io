@@ -213,7 +213,15 @@ func (e *ServerError) Status() int {
 }
 
 func (e *ServerError) Message() string {
-	return http.StatusText(e.Status())
+	return "Something went wrong on our side, sorry! Our team has been notified and will resolve the problem as soon as possible!"
+}
+
+func (e *ServerError) Format(s fmt.State, verb rune) {
+	if err, ok := e.error.(fmt.Formatter); ok {
+		err.Format(s, verb)
+	} else {
+		fmt.Fprintf(s, "%"+string(verb), e)
+	}
 }
 
 type UnauthorizedError struct {
