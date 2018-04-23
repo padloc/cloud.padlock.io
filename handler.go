@@ -12,7 +12,9 @@ import (
 	"github.com/stripe/stripe-go/sub"
 	"io/ioutil"
 	"net/http"
+	"strconv"
 	"strings"
+	"time"
 )
 
 type Dashboard struct {
@@ -26,15 +28,26 @@ func (h *Dashboard) Handle(w http.ResponseWriter, r *http.Request, auth *pc.Auth
 		return err
 	}
 
-	accMap := subAcc.ToMap(acc)
-	accMap["displaySubscription"] = !NoSubRequired(auth)
-
 	couponCode := r.URL.Query().Get("coupon")
 	if couponCode != "" {
 		if coupon, err := coupon.Get(couponCode, nil); err == nil {
-			accMap["coupon"] = coupon
+			redeemWithin, _ := strconv.Atoi(coupon.Meta["redeemWithin"])
+
+			subAcc.Promo = &Promo{
+				Coupon:       coupon,
+				Created:      time.Now(),
+				Title:        coupon.Meta["title"],
+				Description:  coupon.Meta["description"],
+				RedeemWithin: redeemWithin,
+			}
+
+			if err := h.Storage.Put(subAcc); err != nil {
+				return err
+			}
 		}
 	}
+
+	accMap := subAcc.ToMap(acc)
 
 	params := pc.DashboardParams(r, auth)
 	params["account"] = accMap

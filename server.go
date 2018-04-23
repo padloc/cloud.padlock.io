@@ -88,7 +88,7 @@ func (server *Server) InitEndpoints() {
 		Handlers: map[string]pc.Handler{
 			"GET": (&CheckSubscription{server, false}).Wrap(&AccountInfo{server}),
 		},
-		AuthType: "api",
+		AuthType: "universal",
 	}
 }
 

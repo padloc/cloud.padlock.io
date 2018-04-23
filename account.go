@@ -17,11 +17,20 @@ func ChoosePlan() string {
 	return plan.ID
 }
 
+type Promo struct {
+	Created      time.Time      `json:"created"`
+	Coupon       *stripe.Coupon `json:"coupon"`
+	Title        string         `json:"title"`
+	Description  string         `json:"description"`
+	RedeemWithin int            `json:"redeemWithin"`
+}
+
 type Account struct {
 	Email      string
 	Created    time.Time
 	Customer   *stripe.Customer
 	TrackingID string
+	Promo      *Promo
 }
 
 func (acc *Account) Subscription() *stripe.Sub {
@@ -205,6 +214,8 @@ func (subAcc *Account) ToMap(acc *pc.Account) map[string]interface{} {
 
 		accMap["billing"] = billing
 	}
+
+	accMap["promo"] = subAcc.Promo
 
 	return accMap
 }
