@@ -90,6 +90,12 @@ func (server *Server) InitEndpoints() {
 		},
 		AuthType: "universal",
 	}
+
+	server.Server.Endpoints["/apply-promo/"] = &pc.Endpoint{
+		Handlers: map[string]pc.Handler{
+			"POST": &ApplyPromo{server},
+		},
+	}
 }
 
 func (server *Server) Init() error {

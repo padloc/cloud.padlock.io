@@ -4,9 +4,11 @@ import (
 	"encoding/json"
 	pc "github.com/maklesoft/padlock-cloud/padlockcloud"
 	"github.com/stripe/stripe-go"
+	"github.com/stripe/stripe-go/coupon"
 	"github.com/stripe/stripe-go/customer"
 	"github.com/stripe/stripe-go/sub"
 	"math/rand"
+	"strconv"
 	"time"
 )
 
@@ -246,7 +248,25 @@ func AccountFromEmail(email string, create bool, storage pc.Storage) (*Account, 
 			if err = storage.Put(acc); err != nil {
 				return nil, err
 			}
+		} else {
+			return nil, nil
 		}
 	}
 	return acc, nil
+}
+
+func PromoFromCoupon(couponCode string) (*Promo, error) {
+	if coup, err := coupon.Get(couponCode, nil); err != nil {
+		return nil, err
+	} else {
+		redeemWithin, _ := strconv.Atoi(coup.Meta["redeemWithin"])
+
+		return &Promo{
+			Coupon:       coup,
+			Created:      time.Now(),
+			Title:        coup.Meta["title"],
+			Description:  coup.Meta["description"],
+			RedeemWithin: redeemWithin,
+		}, nil
+	}
 }

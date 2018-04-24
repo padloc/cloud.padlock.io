@@ -46,10 +46,17 @@ func (m *CheckSubscription) Wrap(h pc.Handler) pc.Handler {
 			return err
 		}
 
-		if err := acc.UpdateCustomer(m.Storage); err != nil {
-			return err
+		var status string
+		var trialEnd int64
+		if acc != nil {
+			if err := acc.UpdateCustomer(m.Storage); err != nil {
+				return err
+			}
+			status, trialEnd = acc.SubscriptionStatus()
+		} else {
+			status = ""
+			trialEnd = 0
 		}
-		status, trialEnd := acc.SubscriptionStatus()
 
 		if NoSubRequired(a) {
 			status = "active"

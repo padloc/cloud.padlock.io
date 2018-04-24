@@ -6,15 +6,12 @@ import (
 	"fmt"
 	pc "github.com/maklesoft/padlock-cloud/padlockcloud"
 	"github.com/stripe/stripe-go"
-	"github.com/stripe/stripe-go/coupon"
 	"github.com/stripe/stripe-go/customer"
 	"github.com/stripe/stripe-go/invoice"
 	"github.com/stripe/stripe-go/sub"
 	"io/ioutil"
 	"net/http"
-	"strconv"
 	"strings"
-	"time"
 )
 
 type Dashboard struct {
@@ -28,18 +25,9 @@ func (h *Dashboard) Handle(w http.ResponseWriter, r *http.Request, auth *pc.Auth
 		return err
 	}
 
-	couponCode := r.URL.Query().Get("coupon")
-	if couponCode != "" {
-		if coupon, err := coupon.Get(couponCode, nil); err == nil {
-			redeemWithin, _ := strconv.Atoi(coupon.Meta["redeemWithin"])
-
-			subAcc.Promo = &Promo{
-				Coupon:       coupon,
-				Created:      time.Now(),
-				Title:        coupon.Meta["title"],
-				Description:  coupon.Meta["description"],
-				RedeemWithin: redeemWithin,
-			}
+	if coupon := r.URL.Query().Get("coupon"); coupon != "" {
+		if promo, _ := PromoFromCoupon(coupon); promo != nil {
+			subAcc.Promo = promo
 
 			if err := h.Storage.Put(subAcc); err != nil {
 				return err
@@ -561,6 +549,61 @@ func (h *Plans) Handle(w http.ResponseWriter, r *http.Request, auth *pc.AuthToke
 
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(res)
+
+	return nil
+}
+
+type ApplyPromo struct {
+	*Server
+}
+
+func (h *ApplyPromo) Handle(w http.ResponseWriter, r *http.Request, auth *pc.AuthToken) error {
+	usersJSON := []byte(r.PostFormValue("users"))
+	var users []struct {
+		Properties struct {
+			Email string `json:"$email"`
+		} `json:"$properties"`
+	}
+
+	promo, err := PromoFromCoupon(r.URL.Query().Get("coupon"))
+	if err != nil {
+		return &pc.BadRequest{fmt.Sprintf("%v", err)}
+	}
+
+	if err := json.Unmarshal(usersJSON, &users); err != nil {
+		return &pc.BadRequest{fmt.Sprintf("%v", err)}
+	}
+
+	for _, user := range users {
+		email := user.Properties.Email
+		if acc, _ := h.AccountFromEmail(email, false); acc != nil {
+
+			acc.Promo = promo
+			if err := h.Storage.Put(acc); err != nil {
+				return err
+			}
+
+			authRequest, err := pc.NewAuthRequest(email, "web", "", nil)
+			if err != nil {
+				return err
+			}
+			authRequest.Redirect = "/dashboard/?action=subscribe"
+
+			// Save key-token pair to database for activating it later in a separate request
+			if err := h.Storage.Put(authRequest); err != nil {
+				return err
+			}
+
+			actLink := fmt.Sprintf("%s/a/?t=%s", h.BaseUrl(r), authRequest.Token)
+
+			go func() {
+				message := fmt.Sprintf(promo.Coupon.Meta["emailBody"], actLink)
+				if err := h.Sender.Send(email, promo.Coupon.Meta["emailSubject"], message); err != nil {
+					h.LogError(err, r)
+				}
+			}()
+		}
+	}
 
 	return nil
 }
