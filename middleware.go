@@ -22,41 +22,16 @@ func (m *CheckSubscription) Wrap(h pc.Handler) pc.Handler {
 			w.Header().Set("X-Sub-Required", "true")
 		}
 
-		var email string
-		var createAccount bool
-		if a != nil {
-			email = a.Email
-			// Email is verified, so we can safely create an account
-			createAccount = true
+		if a == nil {
+			return &pc.InvalidAuthToken{}
 		}
 
-		if email == "" {
-			email = r.PostFormValue("email")
-			// Email is not necessarily verified, so we can not safely create an account
-			createAccount = false
-		}
-
-		if email == "" {
-			return &SubscriptionRequired{}
-		}
-
-		// Get plan account for this email
-		acc, err := m.AccountFromEmail(email, createAccount)
+		acc, err := m.GetOrCreateAccount(a.Email)
 		if err != nil {
 			return err
 		}
 
-		var status string
-		var trialEnd int64
-		if acc != nil {
-			if err := acc.UpdateCustomer(m.Storage); err != nil {
-				return err
-			}
-			status, trialEnd = acc.SubscriptionStatus()
-		} else {
-			status = ""
-			trialEnd = 0
-		}
+		status, trialEnd := acc.SubscriptionStatus()
 
 		if NoSubRequired(a) {
 			status = "active"

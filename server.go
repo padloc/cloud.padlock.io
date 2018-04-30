@@ -25,8 +25,51 @@ type Server struct {
 	MixpanelConfig *MixpanelConfig
 }
 
-func (server *Server) AccountFromEmail(email string, create bool) (*Account, error) {
-	return AccountFromEmail(email, create, server.Storage)
+func (server *Server) CreateAccount(email string) (*Account, error) {
+	acc, err := NewAccount(email)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := server.Storage.Put(acc); err != nil {
+		return nil, err
+	}
+
+	return acc, nil
+}
+
+func (server *Server) GetAccount(email string) (*Account, error) {
+	acc := &Account{Email: email}
+	if err := server.Storage.Get(acc); err != nil {
+		if err != pc.ErrNotFound {
+			return nil, err
+		} else {
+			return nil, nil
+		}
+	}
+	return acc, nil
+}
+
+func (server *Server) GetOrCreateAccount(email string) (*Account, error) {
+	acc, err := server.GetAccount(email)
+	if err != nil {
+		return nil, err
+	}
+
+	if acc == nil {
+		if acc, err = server.CreateAccount(email); err != nil {
+			return nil, err
+		}
+	} else {
+		if err := acc.UpdateCustomer(); err != nil {
+			return nil, err
+		}
+		if err := server.Storage.Put(acc); err != nil {
+			return nil, err
+		}
+	}
+
+	return acc, nil
 }
 
 func (server *Server) InitEndpoints() {
@@ -80,7 +123,7 @@ func (server *Server) InitEndpoints() {
 
 	server.Server.Endpoints["/plans/"] = &pc.Endpoint{
 		Handlers: map[string]pc.Handler{
-			"GET": (&CheckSubscription{server, false}).Wrap(&Plans{server}),
+			"GET": &Plans{server},
 		},
 	}
 

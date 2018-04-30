@@ -65,36 +65,32 @@ func (acc *Account) CreateCustomer() error {
 		Email: acc.Email,
 	}
 
-	var err error
-	acc.Customer, err = customer.New(params)
+	if customer, err := customer.New(params); err != nil {
+		return err
+	} else {
+		acc.Customer = customer
+	}
 
-	return err
+	return acc.CreateSubscription()
 }
 
-func (acc *Account) UpdateCustomer(storage pc.Storage) error {
+func (acc *Account) UpdateCustomer() error {
 	if acc.Customer == nil {
-		return nil
-	}
-
-	var err error
-	if acc.Customer, err = customer.Get(acc.Customer.ID, nil); err != nil {
-		return err
-	}
-
-	if err := storage.Put(acc); err != nil {
-		return err
+		if err := acc.CreateCustomer(); err != nil {
+			return err
+		}
+	} else {
+		if customer, err := customer.Get(acc.Customer.ID, nil); err != nil {
+			return err
+		} else {
+			acc.Customer = customer
+		}
 	}
 
 	return nil
 }
 
 func (acc *Account) CreateSubscription() error {
-	if acc.Customer == nil {
-		if err := acc.CreateCustomer(); err != nil {
-			return err
-		}
-	}
-
 	if s, err := sub.New(&stripe.SubParams{
 		Customer: acc.Customer.ID,
 		Plan:     ChoosePlan(),
@@ -125,8 +121,8 @@ func (acc *Account) SetPaymentSource(token string) error {
 }
 
 func (acc *Account) HasActiveSubscription() bool {
-	sub := acc.Subscription()
-	return sub != nil && sub.Status == "active"
+	subStatus, _ := acc.SubscriptionStatus()
+	return subStatus == "active"
 }
 
 func (acc *Account) SubscriptionStatus() (string, int64) {
@@ -228,30 +224,10 @@ func NewAccount(email string) (*Account, error) {
 		Created: time.Now(),
 	}
 
-	if err := acc.CreateSubscription(); err != nil {
+	if err := acc.CreateCustomer(); err != nil {
 		return nil, err
 	}
 
-	return acc, nil
-}
-
-func AccountFromEmail(email string, create bool, storage pc.Storage) (*Account, error) {
-	acc := &Account{Email: email}
-	if err := storage.Get(acc); err != nil {
-		if err != pc.ErrNotFound {
-			return nil, err
-		}
-		if create {
-			if acc, err = NewAccount(email); err != nil {
-				return nil, err
-			}
-			if err = storage.Put(acc); err != nil {
-				return nil, err
-			}
-		} else {
-			return nil, nil
-		}
-	}
 	return acc, nil
 }
 

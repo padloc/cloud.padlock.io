@@ -64,7 +64,10 @@ func (t *mixpanelTracker) Track(event *TrackingEvent, r *http.Request, a *pc.Aut
 
 	var acc *Account
 	if a != nil {
-		acc, _ = AccountFromEmail(a.Email, false, t.storage)
+		_acc := &Account{Email: a.Email}
+		if err := t.storage.Get(_acc); err == nil {
+			acc = _acc
+		}
 	}
 
 	if acc != nil {

@@ -19,23 +19,22 @@ type Dashboard struct {
 }
 
 func (h *Dashboard) Handle(w http.ResponseWriter, r *http.Request, auth *pc.AuthToken) error {
-	acc := auth.Account()
-	subAcc, err := h.AccountFromEmail(acc.Email, true)
+	acc, err := h.GetOrCreateAccount(auth.Email)
 	if err != nil {
 		return err
 	}
 
 	if coupon := r.URL.Query().Get("coupon"); coupon != "" {
 		if promo, _ := PromoFromCoupon(coupon); promo != nil {
-			subAcc.Promo = promo
+			acc.Promo = promo
 
-			if err := h.Storage.Put(subAcc); err != nil {
+			if err := h.Storage.Put(acc); err != nil {
 				return err
 			}
 		}
 	}
 
-	accMap := subAcc.ToMap(acc)
+	accMap := acc.ToMap(auth.Account())
 
 	params := pc.DashboardParams(r, auth)
 	params["account"] = accMap
@@ -96,22 +95,9 @@ func (h *Subscribe) Handle(w http.ResponseWriter, r *http.Request, a *pc.AuthTok
 		source = sourceFromRef(r.URL.Query().Get("ref"))
 	}
 
-	acc, err := h.AccountFromEmail(a.Account().Email, true)
+	acc, err := h.GetOrCreateAccount(a.Email)
 	if err != nil {
 		return err
-	}
-
-	if acc.Customer == nil {
-		if err := acc.CreateCustomer(); err != nil {
-			return err
-		}
-		if err := h.Storage.Put(acc); err != nil {
-			return err
-		}
-	} else {
-		if err := acc.UpdateCustomer(h.Storage); err != nil {
-			return err
-		}
 	}
 
 	if acc.GetPaymentSource() == nil && token == "" {
@@ -207,12 +193,8 @@ type Unsubscribe struct {
 }
 
 func (h *Unsubscribe) Handle(w http.ResponseWriter, r *http.Request, a *pc.AuthToken) error {
-	acc, err := h.AccountFromEmail(a.Account().Email, true)
+	acc, err := h.GetOrCreateAccount(a.Email)
 	if err != nil {
-		return err
-	}
-
-	if err := acc.UpdateCustomer(h.Storage); err != nil {
 		return err
 	}
 
@@ -222,10 +204,12 @@ func (h *Unsubscribe) Handle(w http.ResponseWriter, r *http.Request, a *pc.AuthT
 		return &pc.BadRequest{"This account does not have an active subscription"}
 	}
 
-	if s_, err := sub.Cancel(s.ID, nil); err != nil {
+	if _, err := sub.Cancel(s.ID, nil); err != nil {
 		return err
-	} else {
-		*s = *s_
+	}
+
+	if err := acc.UpdateCustomer(); err != nil {
+		return err
 	}
 
 	if err := h.Storage.Put(acc); err != nil {
@@ -254,7 +238,7 @@ func (h *UpdateBilling) Handle(w http.ResponseWriter, r *http.Request, a *pc.Aut
 		return &pc.InvalidAuthToken{}
 	}
 
-	acc, err := h.AccountFromEmail(a.Account().Email, true)
+	acc, err := h.GetOrCreateAccount(a.Email)
 	if err != nil {
 		return err
 	}
@@ -282,29 +266,15 @@ func (h *UpdateBilling) Handle(w http.ResponseWriter, r *http.Request, a *pc.Aut
 	if err := h.Storage.Put(acc); err != nil {
 		return err
 	}
-	//
-	// var eventName string
-	// var action string
-	// if newSubscription {
-	// 	eventName = "Buy Subscription"
-	// 	action = "subscribed"
-	// } else {
-	// 	eventName = "Update Payment Method"
-	// 	action = "payment-updated"
-	// }
-	//
+
 	http.Redirect(w, r, "/dashboard/?action=billing-updated", http.StatusFound)
 
-	h.Info.Printf("%s - update billing - %s\n", pc.FormatRequest(r), acc.Email)
-	//
-	// go h.Track(&TrackingEvent{
-	// 	Name: eventName,
-	// 	Properties: map[string]interface{}{
-	// 		"Plan":   s.Plan.ID,
-	// 		"Source": sourceFromRef(r.URL.Query().Get("ref")),
-	// 	},
-	// }, r, a)
-	//
+	h.Info.Printf("%s - update_billing - %s\n", pc.FormatRequest(r), acc.Email)
+
+	go h.Track(&TrackingEvent{
+		Name: "Update Billing Info",
+	}, r, a)
+
 	return nil
 }
 
@@ -325,7 +295,7 @@ func (h *StripeHook) Handle(w http.ResponseWriter, r *http.Request, a *pc.AuthTo
 	var c *stripe.Customer
 
 	switch event.Type {
-	case "customer.created", "customer.updated":
+	case "customer.updated":
 		c = &stripe.Customer{}
 		if err := json.Unmarshal(event.Data.Raw, c); err != nil {
 			return err
@@ -338,25 +308,29 @@ func (h *StripeHook) Handle(w http.ResponseWriter, r *http.Request, a *pc.AuthTo
 		}
 	}
 
-	if c != nil {
-		acc, err := h.AccountFromEmail(c.Email, true)
-		if err != nil {
-			return err
-		}
-
-		// Only update customer if the ids match (even though that theoretically shouldn't happen,
-		// it's possible that there are two stripe customers with the same email. In that case, this guard
-		// against unexpected behaviour by making sure only one of the customers is used)
-		if acc.Customer.ID == c.ID {
-			acc.Customer = c
-		}
-
-		if err := h.Storage.Put(acc); err != nil {
-			return err
-		}
-
-		h.Info.Printf("%s - stripe_hook - %s:%s", pc.FormatRequest(r), acc.Email, event.Type)
+	if c == nil {
+		return nil
 	}
+
+	acc, err := h.GetAccount(c.Email)
+	if err != nil {
+		return err
+	}
+
+	// Only update customer if the ids match (even though that theoretically shouldn't happen,
+	// it's possible that there are two stripe customers with the same email. In that case, this guard
+	// against unexpected behaviour by making sure only one of the customers is used)
+	if acc == nil || acc.Customer.ID != c.ID {
+		return nil
+	}
+
+	acc.Customer = c
+
+	if err := h.Storage.Put(acc); err != nil {
+		return err
+	}
+
+	h.Info.Printf("%s - stripe_hook - %s:%s", pc.FormatRequest(r), acc.Email, event.Type)
 
 	return nil
 }
@@ -387,6 +361,8 @@ func (h *Track) Handle(w http.ResponseWriter, r *http.Request, a *pc.AuthToken) 
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(response)
 
+	h.Info.Printf("%s - track", pc.FormatRequest(r))
+
 	return nil
 }
 
@@ -395,7 +371,11 @@ type Invoices struct {
 }
 
 func (h *Invoices) Handle(w http.ResponseWriter, r *http.Request, a *pc.AuthToken) error {
-	acc, err := h.AccountFromEmail(a.Account().Email, true)
+	if a == nil {
+		return &pc.InvalidAuthToken{}
+	}
+
+	acc, err := h.GetOrCreateAccount(a.Email)
 	if err != nil {
 		return err
 	}
@@ -463,65 +443,13 @@ func (h *Invoices) Handle(w http.ResponseWriter, r *http.Request, a *pc.AuthToke
 	return nil
 }
 
-type SetPaymentSource struct {
-	*Server
-}
-
-func (h *SetPaymentSource) Handle(w http.ResponseWriter, r *http.Request, a *pc.AuthToken) error {
-	if a == nil {
-		return &pc.InvalidAuthToken{}
-	}
-
-	token := r.PostFormValue("stripeToken")
-
-	if token == "" {
-		return &pc.BadRequest{"No stripe token provided"}
-	}
-
-	acc, err := h.AccountFromEmail(a.Account().Email, true)
-	if err != nil {
-		return err
-	}
-
-	updating := acc.GetPaymentSource() != nil
-
-	if err := acc.SetPaymentSource(token); err != nil {
-		e := wrapCardError(err)
-		go h.Track(&TrackingEvent{
-			Name: "Set Payment Method",
-			Properties: map[string]interface{}{
-				"Source":   sourceFromRef(r.URL.Query().Get("ref")),
-				"Updating": updating,
-				"Error":    e.Error(),
-			},
-		}, r, a)
-		return e
-	}
-
-	if err := h.Storage.Put(acc); err != nil {
-		return err
-	}
-
-	h.Info.Printf("%s - payment_source:set - %s\n", pc.FormatRequest(r), acc.Email)
-
-	go h.Track(&TrackingEvent{
-		Name: "Set Payment Method",
-		Properties: map[string]interface{}{
-			"Source":   sourceFromRef(r.URL.Query().Get("ref")),
-			"Updating": updating,
-		},
-	}, r, a)
-
-	return nil
-}
-
 type AccountInfo struct {
 	*Server
 }
 
 func (h *AccountInfo) Handle(w http.ResponseWriter, r *http.Request, auth *pc.AuthToken) error {
 	acc := auth.Account()
-	subAcc, err := h.AccountFromEmail(acc.Email, true)
+	subAcc, err := h.GetOrCreateAccount(acc.Email)
 	if err != nil {
 		return err
 	}
@@ -533,6 +461,8 @@ func (h *AccountInfo) Handle(w http.ResponseWriter, r *http.Request, auth *pc.Au
 
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(res)
+
+	h.Info.Printf("%s - account_info - %s\n", pc.FormatRequest(r), acc.Email)
 
 	return nil
 }
@@ -576,7 +506,7 @@ func (h *ApplyPromo) Handle(w http.ResponseWriter, r *http.Request, auth *pc.Aut
 
 	for _, user := range users {
 		email := user.Properties.Email
-		if acc, _ := h.AccountFromEmail(email, false); acc != nil {
+		if acc, _ := h.GetAccount(email); acc != nil {
 
 			acc.Promo = promo
 			if err := h.Storage.Put(acc); err != nil {
