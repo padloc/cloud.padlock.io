@@ -472,7 +472,11 @@ type Plans struct {
 }
 
 func (h *Plans) Handle(w http.ResponseWriter, r *http.Request, auth *pc.AuthToken) error {
-	res, err := json.Marshal(AvailablePlans)
+	plans := make([]map[string]interface{}, len(AvailablePlans))
+	for i, v := range AvailablePlans {
+		plans[i] = planToMap(v)
+	}
+	res, err := json.Marshal(plans)
 	if err != nil {
 		return err
 	}

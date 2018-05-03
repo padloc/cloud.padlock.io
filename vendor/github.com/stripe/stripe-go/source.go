@@ -122,9 +122,10 @@ const (
 type RedirectFlowStatus string
 
 const (
-	RedirectFlowStatusFailed    RedirectFlowStatus = "failed"
-	RedirectFlowStatusPending   RedirectFlowStatus = "pending"
-	RedirectFlowStatusSucceeded RedirectFlowStatus = "succeeded"
+	RedirectFlowStatusFailed      RedirectFlowStatus = "failed"
+	RedirectFlowStatusNotRequired RedirectFlowStatus = "not_required"
+	RedirectFlowStatusPending     RedirectFlowStatus = "pending"
+	RedirectFlowStatusSucceeded   RedirectFlowStatus = "succeeded"
 )
 
 // ReceiverFlow informs of the state of a redirect authentication flow.
@@ -188,6 +189,20 @@ type CodeVerificationFlow struct {
 	Status            CodeVerificationFlowStatus `json:"status"`
 }
 
+type SourceMandateAcceptance struct {
+	Date      string `json:"date"`
+	IP        string `json:"ip"`
+	Status    string `json:"status"`
+	UserAgent string `json:"user_agent"`
+}
+
+type SourceMandate struct {
+	Acceptance         SourceMandateAcceptance `json:"acceptance"`
+	NotificationMethod string                  `json:"notification_method"`
+	Reference          string                  `json:"reference"`
+	URL                string                  `json:"url"`
+}
+
 type Source struct {
 	Amount              int64                 `json:"amount"`
 	ClientSecret        string                `json:"client_secret"`
@@ -197,6 +212,7 @@ type Source struct {
 	Flow                SourceFlow            `json:"flow"`
 	ID                  string                `json:"id"`
 	Live                bool                  `json:"livemode"`
+	Mandate             SourceMandate         `json:"mandate"`
 	Meta                map[string]string     `json:"metadata"`
 	Owner               SourceOwner           `json:"owner"`
 	Receiver            *ReceiverFlow         `json:"receiver,omitempty"`

@@ -14,6 +14,14 @@ import (
 
 var AvailablePlans []*stripe.Plan
 
+func planToMap(plan *stripe.Plan) map[string]interface{} {
+	planJSON, _ := json.Marshal(plan)
+	var planMap map[string]interface{}
+	json.Unmarshal(planJSON, &planMap)
+	planMap["name"] = plan.Nickname
+	return planMap
+}
+
 func ChoosePlan() string {
 	plan := AvailablePlans[rand.Intn(len(AvailablePlans))]
 	return plan.ID
@@ -174,7 +182,7 @@ func (subAcc *Account) ToMap(acc *pc.Account) map[string]interface{} {
 		"trialEnd": trialEnd,
 	}
 
-	accMap["plan"] = AvailablePlans[0]
+	accMap["plan"] = planToMap(AvailablePlans[0])
 
 	if customer := subAcc.Customer; customer != nil {
 		var card *stripe.Card

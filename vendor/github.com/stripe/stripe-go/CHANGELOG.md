@@ -1,5 +1,59 @@
 # Changelog
 
+## 30.6.0 - 2018-04-17
+* [#546](https://github.com/stripe/stripe-go/pull/546) Add `SubParams.TrialFromPlan` and `SubItemsParams.ClearUsage`
+
+## 30.5.0 - 2018-04-09
+* [#543](https://github.com/stripe/stripe-go/pull/543) Support listing orders by customer (add `Customer` to `OrderListParams`)
+
+## 30.4.0 - 2018-04-06
+* [#541](https://github.com/stripe/stripe-go/pull/541) Add `Mandate` on `Source` (and associated mandate structs)
+
+## 30.3.0 - 2018-04-02
+* [#538](https://github.com/stripe/stripe-go/pull/538) Introduce flexible billing primitives for subscriptions
+
+## 30.2.0 - 2018-03-23
+* [#535](https://github.com/stripe/stripe-go/pull/535) Add constant for redirect status `not_required` (`RedirectFlowStatusNotRequired`)
+
+## 30.1.0 - 2018-03-17
+* [#534](https://github.com/stripe/stripe-go/pull/534) Add `AmountZero` to `InvoiceItemParams`
+
+## 30.0.0 - 2018-03-14
+* [#533](https://github.com/stripe/stripe-go/pull/533) Make `DestPayment` under `Transfer` expandable by changing it from a string to a `Charge`
+
+## 29.3.1 - 2018-03-08
+* [#530](https://github.com/stripe/stripe-go/pull/530) Fix mixed up types in `CountrySpec.SupportedBankAccountCurrencies`
+
+## 29.3.0 - 2018-03-01
+* [#527](https://github.com/stripe/stripe-go/pull/527) Add `MaidenName`, `PersonalIDNumber`, `PersonalIDNumberProvided` fields to `Owner` struct
+
+## 29.2.0 - 2018-02-26
+* [#525](https://github.com/stripe/stripe-go/pull/525) Support shipping carrier and tracking number in orders
+* [#526](https://github.com/stripe/stripe-go/pull/526) Fix ignored `commonParams` when returning an order
+
+## 29.1.1 - 2018-02-21
+* [#522](https://github.com/stripe/stripe-go/pull/522) Bump API version and fix creating plans with a product
+
+## 29.1.0 - 2018-02-21
+* [#520](https://github.com/stripe/stripe-go/pull/520) Add support for topups
+
+## 29.0.1 - 2018-02-16
+**WARNING:** Please use 29.1.1 instead.
+* [#519](https://github.com/stripe/stripe-go/pull/519) Correct the implementation of `PaymentSource.MarshalJSON` to also handle bank account sources
+
+## 29.0.0 - 2018-02-14
+**WARNING:** Please use 29.1.1 instead.
+* [#518](https://github.com/stripe/stripe-go/pull/518) Bump API version to 2018-02-06 and add support for Product & Plan API
+
+## 28.12.0 - 2018-02-09
+* [#517](https://github.com/stripe/stripe-go/pull/517) Add `BillingCycleAnchor` to `Sub` and `BillingCycleAnchorUnchanged` to `SubParams`
+
+## 28.11.0 - 2018-01-29
+* [#516](https://github.com/stripe/stripe-go/pull/516) Add `AmountZero` to `PlanParams` to it's possible to send zero values when creating or updating a plan
+
+## 28.10.1 - 2018-01-18
+* [#512](https://github.com/stripe/stripe-go/pull/512) Encode empty values found in maps (like `Meta`)
+
 ## 28.10.0 - 2018-01-09
 * [#509](https://github.com/stripe/stripe-go/pull/509) Plumb through additional possible errors when unmarshaling polymorphic types (please test your integrations while upgrading)
 
