@@ -151,7 +151,7 @@ func (acc *Account) SubscriptionStatus() (string, int64) {
 		status = "canceled"
 	}
 
-	if (status == "past_due" || status == "unpaid") && !hasPaymentSource {
+	if (status == "" || status == "past_due" || status == "unpaid") && !hasPaymentSource {
 		status = "trial_expired"
 	}
 
