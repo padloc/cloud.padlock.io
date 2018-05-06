@@ -260,7 +260,7 @@ func (h *UpdateBilling) Handle(w http.ResponseWriter, r *http.Request, a *pc.Aut
 	if customer, err := customer.Update(acc.Customer.ID, params); err != nil {
 		return err
 	} else {
-		acc.Customer = customer
+		acc.SetCustomer(customer)
 	}
 
 	if err := h.Storage.Put(acc); err != nil {
@@ -304,7 +304,7 @@ func (h *StripeHook) Handle(w http.ResponseWriter, r *http.Request, a *pc.AuthTo
 	case "customer.subscription.created", "customer.subscription.updated", "customer.subscription.deleted":
 		var err error
 		if c, err = customer.Get(event.GetObjValue("customer"), nil); err != nil {
-			return err
+			h.LogError(err, r)
 		}
 	}
 
@@ -324,7 +324,7 @@ func (h *StripeHook) Handle(w http.ResponseWriter, r *http.Request, a *pc.AuthTo
 		return nil
 	}
 
-	acc.Customer = c
+	acc.SetCustomer(c)
 
 	if err := h.Storage.Put(acc); err != nil {
 		return err

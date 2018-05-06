@@ -36,11 +36,12 @@ type Promo struct {
 }
 
 type Account struct {
-	Email      string
-	Created    time.Time
-	Customer   *stripe.Customer
-	TrackingID string
-	Promo      *Promo
+	Email           string
+	Created         time.Time
+	Customer        *stripe.Customer
+	TrackingID      string
+	Promo           *Promo
+	CustomerUpdated time.Time
 }
 
 func (acc *Account) Subscription() *stripe.Sub {
@@ -68,15 +69,20 @@ func (acc *Account) Serialize() ([]byte, error) {
 	return json.Marshal(acc)
 }
 
+func (acc *Account) SetCustomer(c *stripe.Customer) {
+	acc.Customer = c
+	acc.CustomerUpdated = time.Now()
+}
+
 func (acc *Account) CreateCustomer() error {
 	params := &stripe.CustomerParams{
 		Email: acc.Email,
 	}
 
-	if customer, err := customer.New(params); err != nil {
+	if c, err := customer.New(params); err != nil {
 		return err
 	} else {
-		acc.Customer = customer
+		acc.SetCustomer(c)
 	}
 
 	return acc.CreateSubscription()
@@ -87,11 +93,11 @@ func (acc *Account) UpdateCustomer() error {
 		if err := acc.CreateCustomer(); err != nil {
 			return err
 		}
-	} else {
-		if customer, err := customer.Get(acc.Customer.ID, nil); err != nil {
+	} else if time.Since(acc.CustomerUpdated) > time.Hour*24 {
+		if c, err := customer.Get(acc.Customer.ID, nil); err != nil {
 			return err
 		} else {
-			acc.Customer = customer
+			acc.SetCustomer(c)
 		}
 	}
 
@@ -184,10 +190,10 @@ func (subAcc *Account) ToMap(acc *pc.Account) map[string]interface{} {
 
 	accMap["plan"] = planToMap(AvailablePlans[0])
 
-	if customer := subAcc.Customer; customer != nil {
+	if c := subAcc.Customer; c != nil {
 		var card *stripe.Card
-		if len(customer.Sources.Values) != 0 && customer.Sources.Values[0].Card != nil {
-			card = customer.Sources.Values[0].Card
+		if len(c.Sources.Values) != 0 && c.Sources.Values[0].Card != nil {
+			card = c.Sources.Values[0].Card
 			accMap["paymentSource"] = map[string]string{
 				"brand":    string(card.Brand),
 				"lastFour": card.LastFour,
@@ -195,16 +201,16 @@ func (subAcc *Account) ToMap(acc *pc.Account) map[string]interface{} {
 		}
 
 		billing := map[string]string{
-			"vat": customer.BusinessVatID,
+			"vat": c.BusinessVatID,
 		}
 
-		if customer.Shipping != nil {
-			billing["name"] = customer.Shipping.Name
-			billing["address1"] = customer.Shipping.Address.Line1
-			billing["address2"] = customer.Shipping.Address.Line2
-			billing["postalCode"] = customer.Shipping.Address.Zip
-			billing["city"] = customer.Shipping.Address.City
-			billing["country"] = customer.Shipping.Address.Country
+		if c.Shipping != nil {
+			billing["name"] = c.Shipping.Name
+			billing["address1"] = c.Shipping.Address.Line1
+			billing["address2"] = c.Shipping.Address.Line2
+			billing["postalCode"] = c.Shipping.Address.Zip
+			billing["city"] = c.Shipping.Address.City
+			billing["country"] = c.Shipping.Address.Country
 		} else if card != nil {
 			billing["name"] = card.Name
 			billing["address1"] = card.Address1
