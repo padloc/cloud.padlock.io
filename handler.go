@@ -312,6 +312,9 @@ func (h *StripeHook) Handle(w http.ResponseWriter, r *http.Request, a *pc.AuthTo
 		return nil
 	}
 
+	h.LockAccount(c.Email)
+	defer h.UnlockAccount(c.Email)
+
 	acc, err := h.GetAccount(c.Email)
 	if err != nil {
 		return err
