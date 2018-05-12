@@ -62,7 +62,9 @@ func (h *Dashboard) Handle(w http.ResponseWriter, r *http.Request, auth *pc.Auth
 			"Action": params["action"],
 			"Source": sourceFromRef(ref),
 		},
-	}, r, auth)
+		AuthToken: auth,
+		Request:   r,
+	})
 
 	return nil
 }
@@ -183,7 +185,9 @@ func (h *Subscribe) Handle(w http.ResponseWriter, r *http.Request, a *pc.AuthTok
 			"Had Payment Source":      hadSource,
 			"Updating Payment Source": token != "",
 		},
-	}, r, a)
+		AuthToken: a,
+		Request:   r,
+	})
 
 	return nil
 }
@@ -223,8 +227,10 @@ func (h *Unsubscribe) Handle(w http.ResponseWriter, r *http.Request, a *pc.AuthT
 	h.Info.Printf("%s - unsubscribe - %s\n", pc.FormatRequest(r), acc.Email)
 
 	go h.Track(&TrackingEvent{
-		Name: "Cancel Subscription",
-	}, r, a)
+		Name:      "Cancel Subscription",
+		AuthToken: a,
+		Request:   r,
+	})
 
 	return nil
 }
@@ -272,8 +278,10 @@ func (h *UpdateBilling) Handle(w http.ResponseWriter, r *http.Request, a *pc.Aut
 	h.Info.Printf("%s - update_billing - %s\n", pc.FormatRequest(r), acc.Email)
 
 	go h.Track(&TrackingEvent{
-		Name: "Update Billing Info",
-	}, r, a)
+		Name:      "Update Billing Info",
+		AuthToken: a,
+		Request:   r,
+	})
 
 	return nil
 }
@@ -352,7 +360,10 @@ func (h *Track) Handle(w http.ResponseWriter, r *http.Request, a *pc.AuthToken) 
 		return err
 	}
 
-	if err := h.Track(event, r, a); err != nil {
+	event.AuthToken = a
+	event.Request = r
+
+	if err := h.Track(event); err != nil {
 		return err
 	}
 
@@ -540,6 +551,53 @@ func (h *ApplyPromo) Handle(w http.ResponseWriter, r *http.Request, auth *pc.Aut
 				}
 			}()
 		}
+	}
+
+	return nil
+}
+
+type DeleteAccount struct {
+	*Server
+}
+
+func (h *DeleteAccount) Handle(w http.ResponseWriter, r *http.Request, a *pc.AuthToken) error {
+	acc, err := h.GetAccount(a.Email)
+
+	if err != nil {
+		return err
+	}
+
+	if acc.Customer != nil {
+		if _, err := customer.Del(acc.Customer.ID, nil); err != nil {
+			h.LogError(err, r)
+		}
+	}
+
+	if err := h.DeleteProfile(acc); err != nil {
+		h.LogError(err, r)
+	}
+
+	if err := h.Storage.Delete(acc); err != nil {
+		return err
+	}
+
+	if err := h.DeleteAccount(acc.Email); err != nil {
+		return err
+	}
+
+	if err := h.Sender.Send(acc.Email, "Padlock Account Deletion", fmt.Sprintf(`
+Hi there,
+
+we're writing you to inform you that your Padlock online account %s was deleted successfully.
+
+Sorry to see you go! We'll continue to work hard on making Padlock better and we hope you'll
+give us another chance in the future! If you have any suggestions on how we can improve our
+product, please let us know! Just reply to this email to send us your feedback.
+
+Thanks!
+Your Padlock Team
+`, acc.Email)); err != nil {
+		h.LogError(err, r)
 	}
 
 	return nil

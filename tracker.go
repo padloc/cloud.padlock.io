@@ -31,10 +31,13 @@ type TrackingEvent struct {
 	TrackingID string                 `json:"trackingID"`
 	Name       string                 `json:"event"`
 	Properties map[string]interface{} `json:"props"`
+	Request    *http.Request
+	AuthToken  *pc.AuthToken
 }
 
 type Tracker interface {
-	Track(event *TrackingEvent, r *http.Request, a *pc.AuthToken) error
+	Track(event *TrackingEvent) error
+	DeleteProfile(acc *Account) error
 }
 
 type mixpanelTracker struct {
@@ -49,9 +52,13 @@ func NewMixpanelTracker(token string, storage pc.Storage) Tracker {
 	}
 }
 
-func (t *mixpanelTracker) Track(event *TrackingEvent, r *http.Request, a *pc.AuthToken) error {
-	ip := pc.IPFromRequest(r)
+func (t *mixpanelTracker) Track(event *TrackingEvent) error {
+	var ip string
+	if event.Request != nil {
+		ip = pc.IPFromRequest(event.Request)
+	}
 
+	a := event.AuthToken
 	originalTrackingID := event.TrackingID
 
 	if event.TrackingID == "" {
@@ -98,8 +105,8 @@ func (t *mixpanelTracker) Track(event *TrackingEvent, r *http.Request, a *pc.Aut
 	var device *pc.Device
 	if a != nil {
 		device = a.Device
-	} else {
-		device = pc.DeviceFromRequest(r)
+	} else if event.Request != nil {
+		device = pc.DeviceFromRequest(event.Request)
 	}
 
 	if device != nil {
@@ -188,3 +195,27 @@ func (t *mixpanelTracker) Track(event *TrackingEvent, r *http.Request, a *pc.Aut
 
 	return nil
 }
+
+func (t *mixpanelTracker) DeleteProfile(acc *Account) error {
+	if err := t.Track(&TrackingEvent{
+		TrackingID: acc.TrackingID,
+		Name:       "Delete Account",
+	}); err != nil {
+		return err
+	}
+
+	return t.mixpanel.Update(acc.TrackingID, &mixpanel.Update{
+		Operation: "$set",
+		Properties: map[string]interface{}{
+			"Account Deleted": time.Now().UTC().Format(time.RFC3339),
+			"$email":          "",
+		},
+	})
+}
+
+//
+// func (t *mixpanelTracker) DeleteProfile(acc *Account) error {
+// 	return t.mixpanel.Update(acc.TrackingID, &mixpanel.Update{
+// 		Operation: "$delete",
+// 	})
+// }

@@ -139,6 +139,13 @@ func (server *Server) InitEndpoints() {
 			"POST": &ApplyPromo{server},
 		},
 	}
+
+	server.Server.Endpoints["/deleteaccount/"] = &pc.Endpoint{
+		Handlers: map[string]pc.Handler{
+			"POST": &DeleteAccount{server},
+		},
+		AuthType: "web",
+	}
 }
 
 func (server *Server) Init() error {
