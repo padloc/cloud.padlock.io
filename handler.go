@@ -509,7 +509,8 @@ func (h *ApplyPromo) Handle(w http.ResponseWriter, r *http.Request, auth *pc.Aut
 	usersJSON := []byte(r.PostFormValue("users"))
 	var users []struct {
 		Properties struct {
-			Email string `json:"$email"`
+			Email        string `json:"$email"`
+			Unsubscribed string `json:"$unsubscribed"`
 		} `json:"$properties"`
 	}
 
@@ -544,12 +545,14 @@ func (h *ApplyPromo) Handle(w http.ResponseWriter, r *http.Request, auth *pc.Aut
 
 			actLink := fmt.Sprintf("%s/a/?t=%s", h.BaseUrl(r), authRequest.Token)
 
-			go func() {
-				message := fmt.Sprintf(promo.Coupon.Meta["emailBody"], actLink)
-				if err := h.Sender.Send(email, promo.Coupon.Meta["emailSubject"], message); err != nil {
-					h.LogError(err, r)
-				}
-			}()
+			if user.Properties.Unsubscribed == "" {
+				go func() {
+					message := fmt.Sprintf(promo.Coupon.Meta["emailBody"], actLink)
+					if err := h.Sender.Send(email, promo.Coupon.Meta["emailSubject"], message); err != nil {
+						h.LogError(err, r)
+					}
+				}()
+			}
 		}
 	}
 
