@@ -543,11 +543,16 @@ func (h *ApplyPromo) Handle(w http.ResponseWriter, r *http.Request, auth *pc.Aut
 				return err
 			}
 
-			actLink := fmt.Sprintf("%s/a/?t=%s", h.BaseUrl(r), authRequest.Token)
-
 			if user.Properties.Unsubscribed == "" {
 				go func() {
-					message := fmt.Sprintf(promo.Coupon.Meta["emailBody"], actLink)
+					actLink := fmt.Sprintf("%s/a/?t=%s", h.BaseUrl(r), authRequest.Token)
+					optoutLink := fmt.Sprintf("%s/optout/?tid=%s", h.BaseUrl(r), acc.TrackingID)
+					message := fmt.Sprintf(
+						"%s\n\nUnsubscribe -> %s",
+						fmt.Sprintf(promo.Coupon.Meta["emailBody"], actLink),
+						optoutLink,
+					)
+
 					if err := h.Sender.Send(email, promo.Coupon.Meta["emailSubject"], message); err != nil {
 						h.LogError(err, r)
 					}
