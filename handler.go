@@ -12,6 +12,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strings"
+	"time"
 )
 
 type Dashboard struct {
@@ -62,8 +63,8 @@ func (h *Dashboard) Handle(w http.ResponseWriter, r *http.Request, auth *pc.Auth
 			"Action": params["action"],
 			"Source": sourceFromRef(ref),
 		},
-		AuthToken: auth,
-		Request:   r,
+		authToken: auth,
+		request:   r,
 	})
 
 	return nil
@@ -185,8 +186,8 @@ func (h *Subscribe) Handle(w http.ResponseWriter, r *http.Request, a *pc.AuthTok
 			"Had Payment Source":      hadSource,
 			"Updating Payment Source": token != "",
 		},
-		AuthToken: a,
-		Request:   r,
+		authToken: a,
+		request:   r,
 	})
 
 	return nil
@@ -228,8 +229,8 @@ func (h *Unsubscribe) Handle(w http.ResponseWriter, r *http.Request, a *pc.AuthT
 
 	go h.Track(&TrackingEvent{
 		Name:      "Cancel Subscription",
-		AuthToken: a,
-		Request:   r,
+		authToken: a,
+		request:   r,
 	})
 
 	return nil
@@ -279,8 +280,8 @@ func (h *UpdateBilling) Handle(w http.ResponseWriter, r *http.Request, a *pc.Aut
 
 	go h.Track(&TrackingEvent{
 		Name:      "Update Billing Info",
-		AuthToken: a,
-		Request:   r,
+		authToken: a,
+		request:   r,
 	})
 
 	return nil
@@ -360,8 +361,8 @@ func (h *Track) Handle(w http.ResponseWriter, r *http.Request, a *pc.AuthToken) 
 		return err
 	}
 
-	event.AuthToken = a
-	event.Request = r
+	event.authToken = a
+	event.request = r
 
 	if err := h.Track(event); err != nil {
 		return err

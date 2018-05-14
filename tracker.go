@@ -31,8 +31,8 @@ type TrackingEvent struct {
 	TrackingID string                 `json:"trackingID"`
 	Name       string                 `json:"event"`
 	Properties map[string]interface{} `json:"props"`
-	Request    *http.Request
-	AuthToken  *pc.AuthToken
+	request    *http.Request
+	authToken  *pc.AuthToken
 }
 
 type Tracker interface {
@@ -55,11 +55,11 @@ func NewMixpanelTracker(token string, storage pc.Storage) Tracker {
 
 func (t *mixpanelTracker) Track(event *TrackingEvent) error {
 	var ip string
-	if event.Request != nil {
-		ip = pc.IPFromRequest(event.Request)
+	if event.request != nil {
+		ip = pc.IPFromRequest(event.request)
 	}
 
-	a := event.AuthToken
+	a := event.authToken
 	originalTrackingID := event.TrackingID
 
 	if event.TrackingID == "" {
@@ -106,8 +106,8 @@ func (t *mixpanelTracker) Track(event *TrackingEvent) error {
 	var device *pc.Device
 	if a != nil {
 		device = a.Device
-	} else if event.Request != nil {
-		device = pc.DeviceFromRequest(event.Request)
+	} else if event.request != nil {
+		device = pc.DeviceFromRequest(event.request)
 	}
 
 	if device != nil {
