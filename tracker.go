@@ -38,6 +38,7 @@ type TrackingEvent struct {
 type Tracker interface {
 	Track(event *TrackingEvent) error
 	DeleteProfile(acc *Account) error
+	UnsubscribeProfile(tid string) error
 }
 
 type mixpanelTracker struct {
@@ -209,6 +210,22 @@ func (t *mixpanelTracker) DeleteProfile(acc *Account) error {
 		Properties: map[string]interface{}{
 			"Account Deleted": time.Now().UTC().Format(time.RFC3339),
 			"$email":          "",
+		},
+	})
+}
+
+func (t *mixpanelTracker) UnsubscribeProfile(tid string) error {
+	if err := t.Track(&TrackingEvent{
+		TrackingID: tid,
+		Name:       "Unsubscribe",
+	}); err != nil {
+		return err
+	}
+
+	return t.mixpanel.Update(tid, &mixpanel.Update{
+		Operation: "$set",
+		Properties: map[string]interface{}{
+			"$unsubscribed": time.Now().UTC().Format(time.RFC3339),
 		},
 	})
 }

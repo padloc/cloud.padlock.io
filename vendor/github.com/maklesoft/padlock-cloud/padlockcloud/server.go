@@ -355,7 +355,7 @@ func (server *Server) InitEndpoints() {
 		Handlers: map[string]Handler{
 			"POST": &DeleteAccount{server},
 		},
-		AuthType: "web",
+		AuthType: "universal",
 	}
 
 	// Dashboard for managing data, auth tokens etc.

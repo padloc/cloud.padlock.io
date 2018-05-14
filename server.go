@@ -146,6 +146,12 @@ func (server *Server) InitEndpoints() {
 		},
 		AuthType: "web",
 	}
+
+	server.Server.Endpoints["/optout/"] = &pc.Endpoint{
+		Handlers: map[string]pc.Handler{
+			"GET": &OptOutEmail{server},
+		},
+	}
 }
 
 func (server *Server) Init() error {

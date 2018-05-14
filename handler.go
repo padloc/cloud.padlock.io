@@ -602,3 +602,23 @@ Your Padlock Team
 
 	return nil
 }
+
+type OptOutEmail struct {
+	*Server
+}
+
+func (h *OptOutEmail) Handle(w http.ResponseWriter, r *http.Request, auth *pc.AuthToken) error {
+	var tid string
+
+	if tid = r.URL.Query().Get("tid"); tid == "" {
+		return &pc.BadRequest{}
+	}
+
+	if err := h.UnsubscribeProfile(tid); err != nil {
+		return err
+	}
+
+	w.Write([]byte("You have been unsubscribed successfully!"))
+
+	return nil
+}
