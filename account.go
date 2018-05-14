@@ -253,7 +253,6 @@ func PromoFromCoupon(couponCode string) (*Promo, error) {
 
 		return &Promo{
 			Coupon:       coup,
-			Created:      time.Now(),
 			Title:        coup.Meta["title"],
 			Description:  coup.Meta["description"],
 			RedeemWithin: redeemWithin,

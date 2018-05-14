@@ -27,6 +27,7 @@ func (h *Dashboard) Handle(w http.ResponseWriter, r *http.Request, auth *pc.Auth
 
 	if coupon := r.URL.Query().Get("coupon"); coupon != "" {
 		if promo, _ := PromoFromCoupon(coupon); promo != nil {
+			promo.Created = time.Now()
 			acc.Promo = promo
 
 			if err := h.Storage.Put(acc); err != nil {
@@ -467,6 +468,13 @@ func (h *AccountInfo) Handle(w http.ResponseWriter, r *http.Request, auth *pc.Au
 	subAcc, err := h.GetOrCreateAccount(acc.Email)
 	if err != nil {
 		return err
+	}
+
+	if subAcc.Promo != nil && subAcc.Promo.Created.IsZero() {
+		subAcc.Promo.Created = time.Now()
+		if err := h.Storage.Put(subAcc); err != nil {
+			return err
+		}
 	}
 
 	res, err := json.Marshal(subAcc.ToMap(acc))
