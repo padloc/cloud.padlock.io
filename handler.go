@@ -509,8 +509,7 @@ func (h *ApplyPromo) Handle(w http.ResponseWriter, r *http.Request, auth *pc.Aut
 	usersJSON := []byte(r.PostFormValue("users"))
 	var users []struct {
 		Properties struct {
-			Email        string `json:"$email"`
-			Unsubscribed string `json:"$unsubscribed"`
+			Email string `json:"$email"`
 		} `json:"$properties"`
 	}
 
@@ -531,33 +530,32 @@ func (h *ApplyPromo) Handle(w http.ResponseWriter, r *http.Request, auth *pc.Aut
 			if err := h.Storage.Put(acc); err != nil {
 				return err
 			}
-
-			authRequest, err := pc.NewAuthRequest(email, "web", "", nil)
-			if err != nil {
-				return err
-			}
-			authRequest.Redirect = "/dashboard/?action=subscribe"
-
-			// Save key-token pair to database for activating it later in a separate request
-			if err := h.Storage.Put(authRequest); err != nil {
-				return err
-			}
-
-			if user.Properties.Unsubscribed == "" {
-				go func() {
-					actLink := fmt.Sprintf("%s/a/?t=%s", h.BaseUrl(r), authRequest.Token)
-					optoutLink := fmt.Sprintf("%s/optout/?tid=%s", h.BaseUrl(r), acc.TrackingID)
-					message := fmt.Sprintf(
-						"%s\n\nUnsubscribe -> %s",
-						fmt.Sprintf(promo.Coupon.Meta["emailBody"], actLink),
-						optoutLink,
-					)
-
-					if err := h.Sender.Send(email, promo.Coupon.Meta["emailSubject"], message); err != nil {
-						h.LogError(err, r)
-					}
-				}()
-			}
+			//
+			// authRequest, err := pc.NewAuthRequest(email, "web", "", nil)
+			// if err != nil {
+			// 	return err
+			// }
+			// authRequest.Redirect = "/dashboard/?action=subscribe"
+			//
+			// // Save key-token pair to database for activating it later in a separate request
+			// if err := h.Storage.Put(authRequest); err != nil {
+			// 	return err
+			// }
+			// if user.Properties.Unsubscribed == "" {
+			// 	go func() {
+			// 		actLink := fmt.Sprintf("%s/a/?t=%s", h.BaseUrl(r), authRequest.Token)
+			// 		optoutLink := fmt.Sprintf("%s/optout/?tid=%s", h.BaseUrl(r), acc.TrackingID)
+			// 		message := fmt.Sprintf(
+			// 			"%s\n\nUnsubscribe -> %s",
+			// 			fmt.Sprintf(promo.Coupon.Meta["emailBody"], actLink),
+			// 			optoutLink,
+			// 		)
+			//
+			// 		if err := h.Sender.Send(email, promo.Coupon.Meta["emailSubject"], message); err != nil {
+			// 			h.LogError(err, r)
+			// 		}
+			// 	}()
+			// }
 		}
 	}
 
