@@ -174,6 +174,9 @@ func (cliApp *CliApp) SyncCustomers(context *cli.Context) error {
 				nupd = nupd + 1
 			} else {
 				fmt.Printf("%s: Found account with different customer ID; Deleting stripe customer...\n", acc.Email)
+				if c.DefaultSource != nil {
+					return errors.New("Customer has payment source! Bailing...")
+				}
 				if _, err := customer.Del(c.ID, nil); err != nil {
 					return err
 				}
@@ -181,6 +184,9 @@ func (cliApp *CliApp) SyncCustomers(context *cli.Context) error {
 			}
 		} else if err == pc.ErrNotFound {
 			fmt.Printf("%s: Account not found. Deleting stripe customer...\n", acc.Email)
+			if c.DefaultSource != nil {
+				return errors.New("Customer has payment source! Bailing...")
+			}
 			if _, err := customer.Del(c.ID, nil); err != nil {
 				return err
 			}
