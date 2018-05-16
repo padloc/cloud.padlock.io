@@ -143,6 +143,58 @@ func (cliApp *CliApp) DeleteAccount(context *cli.Context) error {
 	return cliApp.Storage.Delete(acc)
 }
 
+func (cliApp *CliApp) SyncCustomers(context *cli.Context) error {
+	tracker := NewMixpanelTracker(cliApp.Config.Mixpanel.Token, cliApp.Storage)
+
+	if err := cliApp.Storage.Open(); err != nil {
+		return err
+	}
+	defer cliApp.Storage.Close()
+
+	params := &stripe.CustomerListParams{}
+	params.Filters.AddFilter("limit", "", "100")
+	i := customer.List(params)
+	nupd := 0
+	ndel := 0
+
+	for i.Next() {
+		c := i.Customer()
+		acc := &Account{Email: c.Email}
+
+		if err := cliApp.Storage.Get(acc); err == nil {
+			if acc.Customer == nil || c.ID == acc.Customer.ID {
+				fmt.Printf("%s: Found account with matching customer ID; Updating...\n", acc.Email)
+				acc.SetCustomer(c)
+				if err := cliApp.Storage.Put(acc); err != nil {
+					return err
+				}
+				if err := tracker.UpdateProfile(acc, nil); err != nil {
+					return err
+				}
+				nupd = nupd + 1
+			} else {
+				fmt.Printf("%s: Found account with different customer ID; Deleting stripe customer...\n", acc.Email)
+				if _, err := customer.Del(c.ID, nil); err != nil {
+					return err
+				}
+				ndel = ndel + 1
+			}
+		} else if err == pc.ErrNotFound {
+			fmt.Printf("%s: Account not found. Deleting stripe customer...\n", acc.Email)
+			if _, err := customer.Del(c.ID, nil); err != nil {
+				return err
+			}
+			ndel = ndel + 1
+		} else {
+			return err
+		}
+	}
+
+	fmt.Printf("Customers Updated: %d\nCustomers Deleted: %d\n", nupd, ndel)
+
+	return nil
+}
+
 func NewCliApp() *CliApp {
 	config := &CliConfig{}
 	pcCli := pc.NewCliApp()
@@ -203,6 +255,11 @@ func NewCliApp() *CliApp {
 					Name:   "delete",
 					Usage:  "Delete account",
 					Action: app.DeleteAccount,
+				},
+				{
+					Name:   "sync",
+					Usage:  "Sync Stripe Customers",
+					Action: app.SyncCustomers,
 				},
 			},
 		},
