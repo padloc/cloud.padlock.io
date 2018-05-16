@@ -205,7 +205,9 @@ func (t *mixpanelTracker) UpdateProfile(acc *Account, props map[string]interface
 	}
 
 	return t.mixpanel.Update(acc.TrackingID, &mixpanel.Update{
+		IP:         "0",
 		Operation:  "$set",
+		Timestamp:  mixpanel.IgnoreTime,
 		Properties: update,
 	})
 
