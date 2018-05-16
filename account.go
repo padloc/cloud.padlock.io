@@ -160,9 +160,13 @@ func (acc *Account) SubscriptionStatus() (string, int64) {
 
 func (acc *Account) SubscriptionPlan() string {
 	if s := acc.Subscription(); s != nil {
-		return s.Plan.ID
+		if s.Plan.Nickname != "" {
+			return s.Plan.Nickname
+		} else {
+			return s.Plan.ID
+		}
 	} else {
-		return "none"
+		return ""
 	}
 }
 
