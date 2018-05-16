@@ -343,6 +343,10 @@ func (h *StripeHook) Handle(w http.ResponseWriter, r *http.Request, a *pc.AuthTo
 		return err
 	}
 
+	if err := h.Tracker.UpdateProfile(acc, nil); err != nil {
+		h.LogError(err, r)
+	}
+
 	h.Info.Printf("%s - stripe_hook - %s:%s", pc.FormatRequest(r), acc.Email, event.Type)
 
 	return nil

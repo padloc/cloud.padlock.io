@@ -158,6 +158,14 @@ func (acc *Account) SubscriptionStatus() (string, int64) {
 	return status, trialEnd
 }
 
+func (acc *Account) SubscriptionPlan() string {
+	if s := acc.Subscription(); s != nil {
+		return s.Plan.ID
+	} else {
+		return "none"
+	}
+}
+
 func (acc *Account) RemainingTrialPeriod() time.Duration {
 	sub := acc.Subscription()
 

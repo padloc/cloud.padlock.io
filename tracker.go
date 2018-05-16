@@ -38,6 +38,7 @@ type TrackingEvent struct {
 type Tracker interface {
 	Track(event *TrackingEvent) error
 	DeleteProfile(acc *Account) error
+	UpdateProfile(acc *Account, props map[string]interface{}) error
 	UnsubscribeProfile(tid string) error
 }
 
@@ -165,29 +166,15 @@ func (t *mixpanelTracker) Track(event *TrackingEvent) error {
 			}
 		}
 
-		update := map[string]interface{}{
-			"Paired Devices": nDevices,
-			"Platforms":      platforms,
-			"Versions":       versions,
+		if err := t.UpdateProfile(acc, map[string]interface{}{
 			"Last Sync":      props["Last Sync"],
 			"Last Rated":     props["Last Rated"],
 			"Rated Version":  props["Rated Version"],
 			"Rating":         props["Rating"],
 			"Last Reviewed":  props["Last Reviewed"],
-		}
-
-		subStatus := "inactive"
-		if s := acc.Subscription(); s != nil {
-			subStatus = string(s.Status)
-			update["Plan"] = s.Plan.ID
-		}
-
-		update["Subscription Status"] = subStatus
-
-		if err := t.mixpanel.Update(event.TrackingID, &mixpanel.Update{
-			IP:         ip,
-			Operation:  "$set",
-			Properties: update,
+			"Paired Devices": nDevices,
+			"Platforms":      platforms,
+			"Versions":       versions,
 		}); err != nil {
 			return err
 		}
@@ -197,7 +184,38 @@ func (t *mixpanelTracker) Track(event *TrackingEvent) error {
 	return nil
 }
 
+func (t *mixpanelTracker) UpdateProfile(acc *Account, props map[string]interface{}) error {
+	if acc.TrackingID == "" {
+		acc.TrackingID = uuid.NewV4().String()
+		t.storage.Put(acc)
+	}
+
+	subStatus, _ := acc.SubscriptionStatus()
+
+	update := map[string]interface{}{
+		"Last Updated":        time.Now().UTC().Format(time.RFC3339),
+		"Plan":                acc.SubscriptionPlan(),
+		"Subscription Status": subStatus,
+	}
+
+	if props != nil {
+		for k, v := range props {
+			update[k] = v
+		}
+	}
+
+	return t.mixpanel.Update(acc.TrackingID, &mixpanel.Update{
+		Operation:  "$set",
+		Properties: update,
+	})
+
+}
+
 func (t *mixpanelTracker) DeleteProfile(acc *Account) error {
+	if acc.TrackingID == "" {
+		return nil
+	}
+
 	if err := t.Track(&TrackingEvent{
 		TrackingID: acc.TrackingID,
 		Name:       "Delete Account",
@@ -229,10 +247,3 @@ func (t *mixpanelTracker) UnsubscribeProfile(tid string) error {
 		},
 	})
 }
-
-//
-// func (t *mixpanelTracker) DeleteProfile(acc *Account) error {
-// 	return t.mixpanel.Update(acc.TrackingID, &mixpanel.Update{
-// 		Operation: "$delete",
-// 	})
-// }
