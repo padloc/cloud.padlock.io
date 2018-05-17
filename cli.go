@@ -152,48 +152,79 @@ func (cliApp *CliApp) SyncCustomers(context *cli.Context) error {
 	defer cliApp.Storage.Close()
 
 	params := &stripe.CustomerListParams{}
-	params.Filters.AddFilter("limit", "", "100")
+	// params.Filters.AddFilter("limit", "", "100")
+	params.Filters.AddFilter("include[]", "", "total_count")
 	i := customer.List(params)
+
+	curr := 0
+	count := i.Meta().Count
 	nupd := 0
 	ndel := 0
+	nretries := 0
 
-	for i.Next() {
-		c := i.Customer()
-		acc := &Account{Email: c.Email}
+	fmt.Printf("Processing %d customers...\n", count)
 
-		if err := cliApp.Storage.Get(acc); err == nil {
-			if acc.Customer == nil || c.ID == acc.Customer.ID {
-				fmt.Printf("%s: Found account with matching customer ID; Updating...\n", acc.Email)
-				acc.SetCustomer(c)
-				if err := cliApp.Storage.Put(acc); err != nil {
-					return err
+	var iter func() error
+	iter = func() error {
+		for i.Next() {
+			curr = curr + 1
+			fmt.Printf("Processing customer %d/%d ... ", curr, count)
+
+			c := i.Customer()
+			acc := &Account{Email: c.Email}
+
+			if err := cliApp.Storage.Get(acc); err == nil {
+
+				if acc.Customer == nil || c.ID == acc.Customer.ID {
+
+					fmt.Printf("Found account with matching customer ID: %s; Updating...\n", acc.Email)
+					acc.SetCustomer(c)
+					if err := cliApp.Storage.Put(acc); err != nil {
+						return err
+					}
+					nupd = nupd + 1
+
+					go tracker.UpdateProfile(acc, nil)
+
+				} else {
+
+					fmt.Printf("Found account with different customer ID: %s; Deleting stripe customer...\n", acc.Email)
+
+					if c.DefaultSource != nil {
+						fmt.Println("Customer has payment source! Bailing...")
+					} else {
+						ndel = ndel + 1
+						go customer.Del(c.ID, nil)
+					}
+
 				}
-				if err := tracker.UpdateProfile(acc, nil); err != nil {
-					return err
-				}
-				nupd = nupd + 1
-			} else {
-				fmt.Printf("%s: Found account with different customer ID; Deleting stripe customer...\n", acc.Email)
+			} else if err == pc.ErrNotFound {
+
+				fmt.Printf("Account not found: %s; Deleting stripe customer...\n", acc.Email)
+
 				if c.DefaultSource != nil {
-					return errors.New("Customer has payment source! Bailing...")
+					fmt.Println("Customer has payment source! Bailing...")
+				} else {
+					ndel = ndel + 1
+					go customer.Del(c.ID, nil)
 				}
-				if _, err := customer.Del(c.ID, nil); err != nil {
-					return err
-				}
-				ndel = ndel + 1
-			}
-		} else if err == pc.ErrNotFound {
-			fmt.Printf("%s: Account not found. Deleting stripe customer...\n", acc.Email)
-			if c.DefaultSource != nil {
-				return errors.New("Customer has payment source! Bailing...")
-			}
-			if _, err := customer.Del(c.ID, nil); err != nil {
+
+			} else {
 				return err
 			}
-			ndel = ndel + 1
-		} else {
-			return err
 		}
+
+		if err := i.Err(); err != nil && nretries < 100 {
+			nretries = nretries + 1
+			fmt.Printf("Encountered error %v - retrying (%d/100)\n", err, nretries)
+			return iter()
+		}
+
+		return nil
+	}
+
+	if err := iter(); err != nil {
+		return err
 	}
 
 	fmt.Printf("Customers Updated: %d\nCustomers Deleted: %d\n", nupd, ndel)
