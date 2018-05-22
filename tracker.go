@@ -121,6 +121,10 @@ func (t *mixpanelTracker) Track(event *TrackingEvent) error {
 		props["App Version"] = device.AppVersion
 	}
 
+	// Make sure email address isn't tracked in events
+	delete(props, "Email")
+	delete(props, "$email")
+
 	if err := t.mixpanel.Track(event.TrackingID, event.Name, &mixpanel.Event{
 		IP:         ip,
 		Properties: props,
