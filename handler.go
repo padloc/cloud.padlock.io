@@ -27,12 +27,14 @@ func (h *Dashboard) Handle(w http.ResponseWriter, r *http.Request, auth *pc.Auth
 
 	if coupon := r.URL.Query().Get("coupon"); coupon != "" {
 		if promo, _ := PromoFromCoupon(coupon); promo != nil {
-			promo.Created = time.Now()
 			acc.Promo = promo
+		}
+	}
 
-			if err := h.Storage.Put(acc); err != nil {
-				return err
-			}
+	if acc.Promo != nil && acc.Promo.Created.IsZero() {
+		acc.Promo.Created = time.Now()
+		if err := h.Storage.Put(acc); err != nil {
+			return err
 		}
 	}
 
