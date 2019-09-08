@@ -177,7 +177,7 @@ func (server *Server) Init() error {
 	i := plan.List(nil)
 	for i.Next() {
 		plan := i.Plan()
-		if plan.Meta["available"] == "true" {
+		if plan.Meta["available"] == "true" && plan.Meta["type"] == "1" {
 			AvailablePlans = append(AvailablePlans, i.Plan())
 		}
 	}
