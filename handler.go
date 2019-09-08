@@ -592,7 +592,7 @@ func (h *DeleteAccount) Handle(w http.ResponseWriter, r *http.Request, a *pc.Aut
 		if c, err := customer.Get(acc.Customer.ID, nil); err != nil {
 			h.LogError(err, r)
 		} else {
-			acc, migrated := c.Meta["account"]
+			_, migrated := c.Meta["account"]
 			// Only delete stripe customer if the account has not been migrated to Padloc 3
 			if !migrated {
 				if _, err := customer.Del(c.ID, nil); err != nil {
