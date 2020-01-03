@@ -157,7 +157,7 @@ func (cliApp *CliApp) SyncCustomers(context *cli.Context) error {
 	i := customer.List(params)
 
 	curr := 0
-	count := i.Meta().Count
+	count := i.Meta().TotalCount
 	nupd := 0
 	ndel := 0
 	nretries := 0

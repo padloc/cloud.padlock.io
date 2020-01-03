@@ -126,22 +126,23 @@ func (h *Subscribe) Handle(w http.ResponseWriter, r *http.Request, a *pc.AuthTok
 	}
 
 	s := acc.Subscription()
+	trialEndNow := true
 	if s == nil {
 		var err error
-		if s, err = sub.New(&stripe.SubParams{
-			Customer:    acc.Customer.ID,
-			Plan:        plan,
-			TrialEndNow: true,
-			Coupon:      coupon,
+		if s, err = sub.New(&stripe.SubscriptionParams{
+			Customer:    &acc.Customer.ID,
+			Plan:        &plan,
+			TrialEndNow: &trialEndNow,
+			Coupon:      &coupon,
 		}); err != nil {
 			return wrapCardError(err)
 		}
-		acc.Customer.Subs.Values = []*stripe.Sub{s}
+		acc.Customer.Subscriptions.Data = []*stripe.Subscription{s}
 	} else {
-		if s_, err := sub.Update(s.ID, &stripe.SubParams{
-			Plan:        plan,
-			TrialEndNow: true,
-			Coupon:      coupon,
+		if s_, err := sub.Update(s.ID, &stripe.SubscriptionParams{
+			Plan:        &plan,
+			TrialEndNow: &trialEndNow,
+			Coupon:      &coupon,
 		}); err != nil {
 			return wrapCardError(err)
 		} else {
@@ -156,7 +157,7 @@ func (h *Subscribe) Handle(w http.ResponseWriter, r *http.Request, a *pc.AuthTok
 	if s.Status == "unpaid" || s.Status == "past_due" {
 		// Attempt to pay any unpaid invoices
 		i := invoice.List(&stripe.InvoiceListParams{
-			Sub: s.ID,
+			Subscription: &s.ID,
 		})
 		for i.Next() {
 			inv := i.Invoice()
@@ -253,18 +254,24 @@ func (h *UpdateBilling) Handle(w http.ResponseWriter, r *http.Request, a *pc.Aut
 		return err
 	}
 
+	name := r.PostFormValue("name")
+	line1 := r.PostFormValue("address1")
+	line2 := r.PostFormValue("address2")
+	zip := r.PostFormValue("zip")
+	city := r.PostFormValue("city")
+	country := r.PostFormValue("country")
+
 	params := &stripe.CustomerParams{
-		Shipping: &stripe.CustomerShippingDetails{
-			Name: r.PostFormValue("name"),
-			Address: stripe.Address{
-				Line1:   r.PostFormValue("address1"),
-				Line2:   r.PostFormValue("address2"),
-				Zip:     r.PostFormValue("zip"),
-				City:    r.PostFormValue("city"),
-				Country: r.PostFormValue("country"),
+		Shipping: &stripe.CustomerShippingDetailsParams{
+			Name: &name,
+			Address: &stripe.AddressParams{
+				Line1:      &line1,
+				Line2:      &line2,
+				PostalCode: &zip,
+				City:       &city,
+				Country:    &country,
 			},
 		},
-		BusinessVatID: r.PostFormValue("vat"),
 	}
 
 	if customer, err := customer.Update(acc.Customer.ID, params); err != nil {
@@ -315,7 +322,7 @@ func (h *StripeHook) Handle(w http.ResponseWriter, r *http.Request, a *pc.AuthTo
 
 	case "customer.subscription.created", "customer.subscription.updated", "customer.subscription.deleted":
 		var err error
-		if c, err = customer.Get(event.GetObjValue("customer"), nil); err != nil {
+		if c, err = customer.Get(event.GetObjectValue("customer"), nil); err != nil {
 			h.LogError(err, r)
 		}
 	}
@@ -432,7 +439,7 @@ func (h *Invoices) Handle(w http.ResponseWriter, r *http.Request, a *pc.AuthToke
 
 		var invoices []*stripe.Invoice
 		i := invoice.List(&stripe.InvoiceListParams{
-			Customer: acc.Customer.ID,
+			Customer: &acc.Customer.ID,
 		})
 		for i.Next() {
 			inv := i.Invoice()
@@ -592,7 +599,7 @@ func (h *DeleteAccount) Handle(w http.ResponseWriter, r *http.Request, a *pc.Aut
 		if c, err := customer.Get(acc.Customer.ID, nil); err != nil {
 			h.LogError(err, r)
 		} else {
-			_, migrated := c.Meta["account"]
+			_, migrated := c.Metadata["account"]
 			// Only delete stripe customer if the account has not been migrated to Padloc 3
 			if !migrated {
 				if _, err := customer.Del(c.ID, nil); err != nil {
