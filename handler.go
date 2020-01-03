@@ -335,7 +335,7 @@ func (h *StripeHook) Handle(w http.ResponseWriter, r *http.Request, a *pc.AuthTo
 	// Only update customer if the ids match (even though that theoretically shouldn't happen,
 	// it's possible that there are two stripe customers with the same email. In that case, this guard
 	// against unexpected behaviour by making sure only one of the customers is used)
-	if acc == nil || acc.Customer.ID != c.ID {
+	if acc == nil || acc.Customer == nil || acc.Customer.ID != c.ID {
 		return nil
 	}
 
