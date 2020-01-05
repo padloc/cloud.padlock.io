@@ -10,7 +10,7 @@ import (
 	"gopkg.in/urfave/cli.v1"
 	"gopkg.in/yaml.v2"
 
-	pc "github.com/maklesoft/padlock-cloud/padlockcloud"
+	pc "github.com/padloc/padlock-cloud/padlockcloud"
 )
 
 type CliConfig struct {

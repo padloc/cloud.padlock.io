@@ -1,7 +1,7 @@
 package main
 
 import (
-	pc "github.com/maklesoft/padlock-cloud/padlockcloud"
+	pc "github.com/padloc/padlock-cloud/padlockcloud"
 	"net/http"
 	"strconv"
 )

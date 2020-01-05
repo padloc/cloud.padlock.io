@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	pc "github.com/maklesoft/padlock-cloud/padlockcloud"
+	pc "github.com/padloc/padlock-cloud/padlockcloud"
 	"github.com/stripe/stripe-go"
 	"github.com/stripe/stripe-go/customer"
 	"github.com/stripe/stripe-go/invoice"

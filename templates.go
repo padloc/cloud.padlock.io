@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	pc "github.com/maklesoft/padlock-cloud/padlockcloud"
+	pc "github.com/padloc/padlock-cloud/padlockcloud"
 	"github.com/stripe/stripe-go"
 	t "html/template"
 	fp "path/filepath"

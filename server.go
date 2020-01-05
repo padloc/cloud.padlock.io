@@ -2,7 +2,7 @@ package main
 
 import (
 	"errors"
-	pc "github.com/maklesoft/padlock-cloud/padlockcloud"
+	pc "github.com/padloc/padlock-cloud/padlockcloud"
 	"github.com/stripe/stripe-go"
 	"github.com/stripe/stripe-go/plan"
 	"path/filepath"

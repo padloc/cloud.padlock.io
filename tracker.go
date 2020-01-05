@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/dukex/mixpanel"
-	pc "github.com/maklesoft/padlock-cloud/padlockcloud"
+	pc "github.com/padloc/padlock-cloud/padlockcloud"
 	"github.com/satori/go.uuid"
 	"net/http"
 	"time"
