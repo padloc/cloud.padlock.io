@@ -107,9 +107,12 @@ func (acc *Account) UpdateCustomer() error {
 func (acc *Account) CreateSubscription() error {
 	plan := ChoosePlan()
 
+	TrialFromPlan := true
+
 	if s, err := sub.New(&stripe.SubscriptionParams{
-		Customer: &acc.Customer.ID,
-		Plan:     &plan,
+		Customer:      &acc.Customer.ID,
+		Plan:          &plan,
+		TrialFromPlan: &TrialFromPlan,
 	}); err != nil {
 		return err
 	} else {
